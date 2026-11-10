@@ -1,0 +1,7 @@
+Agenteca Core
+Copyright 2026 The Agenteca Authors
+
+Ce produit inclut, dans vendor/openapm/, les schémas JSON de la spécification
+OpenAPM v0.1 (https://microsoft.github.io/apm/specs/openapm-v01/),
+Copyright (c) Microsoft Corporation, distribués sous licence Apache-2.0.
+Ils sont reproduits sans modification.
