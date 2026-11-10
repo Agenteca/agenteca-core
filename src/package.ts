@@ -569,6 +569,8 @@ export interface PackageSummary {
   version?: string;
   description?: string;
   license?: string;
+  /** Cibles déclarées par le manifeste du paquet, s'il en déclare. */
+  declaredTargets?: string[];
   skills: Array<{ name: string; description?: string; files: string[] }>;
   agents: string[];
   commands: string[];
@@ -605,5 +607,6 @@ export function summarizePackage(content: PackageContent): PackageSummary {
   if (content.version) summary.version = content.version;
   if (content.description) summary.description = content.description;
   if (content.license) summary.license = content.license;
+  if (content.manifest?.targets) summary.declaredTargets = content.manifest.targets;
   return summary;
 }
