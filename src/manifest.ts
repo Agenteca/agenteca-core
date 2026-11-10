@@ -314,6 +314,7 @@ export class ManifestFile {
     const exact = this.manifest.apm.find((d) => depIdentity(d) === q || d.localPath === q);
     if (exact) return exact;
     const candidates = this.manifest.apm.filter((d) => {
+      if (d.kind === 'local') return d.localPath!.replace(/\/+$/, '').split('/').pop() === q;
       if (d.kind !== 'git') return false;
       const short = `${d.owner}/${d.repo}${d.virtualPath ? `/${d.virtualPath}` : ''}`;
       return short === q || d.repo === q || d.alias === q || d.virtualPath?.split('/').pop() === q;

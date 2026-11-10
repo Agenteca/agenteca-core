@@ -98,6 +98,11 @@ describe('manifeste apm.yml (spec §4)', () => {
     expect(mf.findDependency('acme/one')?.repo).toBe('one');
     expect(mf.findDependency('pkg')?.repo).toBe('two');
     expect(mf.findDependency('absent')).toBeUndefined();
+    const local = ManifestFile.parse(
+      'name: x\nversion: 1.0.0\ndependencies:\n  apm:\n    - ./pkgs/local-pkg\n',
+    );
+    expect(local.findDependency('local-pkg')?.localPath).toBe('./pkgs/local-pkg');
+    expect(local.findDependency('./pkgs/local-pkg')?.kind).toBe('local');
   });
 
   it('produit des manifestes acceptés par le schéma officiel OpenAPM', () => {

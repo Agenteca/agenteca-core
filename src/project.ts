@@ -476,7 +476,9 @@ export async function applyInstall(p: PreparedInstall, opts: InstallOptions = {}
         entry.source = 'local';
         entry.local_path = pkg.localPath!;
         entry.content_hash = pkg.contentHash!;
-        delete entry.repo_url;
+        // La spec ne l'exige que pour git, mais l'outil apm (0.35.0) refuse un lockfile dont une
+        // entrée locale n'a pas de `repo_url` ; il écrit lui-même `_local/<dossier>`.
+        entry.repo_url = `_local/${path.basename(pkg.dir)}`;
       }
       entry.name = pkg.content.name;
       if (pkg.content.version) entry.version = pkg.content.version;
