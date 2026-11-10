@@ -392,6 +392,7 @@ describe('cycle de vie complet', () => {
       skill_subset: ['b'],
     });
     expect(lock.dependencies.find((d) => d.source === 'local')).toMatchObject({
+      repo_url: '_local/local-pkg',
       local_path: './local-pkg',
       content_hash: expect.stringMatching(/^sha256:/),
     });
