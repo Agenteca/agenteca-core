@@ -61,7 +61,7 @@ export function splitFrontmatter(
   text: string,
   file: string,
 ): { frontmatter: Record<string, unknown> | null; body: string; error?: string } {
-  const src = text.replace(/^﻿/, '');
+  const src = text.replace(/^\uFEFF/, '');
   const m = /^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/.exec(src);
   if (!m) return { frontmatter: null, body: src };
   const body = src.slice(m[0].length);
