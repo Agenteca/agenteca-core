@@ -44,7 +44,7 @@ export async function saveConfig(config: AhubConfig, env: NodeJS.ProcessEnv = pr
 
 /** Déduit le type de registre d'une URL ou d'un chemin. */
 export function inferRegistryKind(url: string): RegistryConfig['kind'] {
-  if (/^(\.{1,2}\/|\/|~\/)/.test(url)) return 'path';
+  if (/^(\.{1,2}(\/|$)|\/|~\/)/.test(url)) return 'path';
   if (
     /^https?:\/\//.test(url) &&
     !/\.git$/.test(url) &&

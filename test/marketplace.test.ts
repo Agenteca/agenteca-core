@@ -153,6 +153,21 @@ describe('marketplaces natifs', () => {
     expect(names('copilot')).toEqual(['partout']);
   });
 
+  it('déduit le type et le nom d’un registre', () => {
+    for (const p of ['.', '..', './cat', '../cat', '/srv/cat', '~/cat'])
+      expect(inferRegistryKind(p), p).toBe('path');
+    for (const g of [
+      'acme/catalog',
+      'https://github.com/acme/catalog',
+      'git@github.com:acme/catalog.git',
+      'https://git.example.org/a/b.git',
+    ])
+      expect(inferRegistryKind(g), g).toBe('git');
+    expect(inferRegistryKind('https://catalogue.exemple.org')).toBe('server');
+    expect(inferRegistryKind('http://localhost:8080')).toBe('server');
+    expect(registryNameFromUrl('https://github.com/acme/Mon_Catalogue.git')).toBe('mon-catalogue');
+  });
+
   it('fait l’aller-retour export Claude → lecture', () => {
     const out = exportMarketplace(catalog, 'claude');
     const { catalog: back } = parseMarketplace(out.json);
