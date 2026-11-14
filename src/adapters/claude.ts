@@ -113,6 +113,8 @@ export const claudeAdapter: Adapter = (content, ctx) => {
       entries: mcp.servers.map((m) => {
         const value: Record<string, unknown> = {};
         if (m.transport === 'stdio') {
+          // `type` est facultatif pour Claude Code ; il est écrit pour produire la même entrée que apm.
+          value.type = 'stdio';
           value.command = convertVars(m.command!, 'plain');
           value.args = (m.args ?? []).map((a) => convertVars(a, 'plain'));
           const env = convertVarMap(m.env, 'plain');

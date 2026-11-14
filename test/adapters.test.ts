@@ -159,6 +159,7 @@ describe('adaptateur Claude Code', () => {
     expect(JSON.parse(snapshot['.mcp.json']!)).toEqual({
       mcpServers: {
         'demo-server': {
+          type: 'stdio',
           command: 'npx',
           args: ['-y', '@example/demo-mcp'],
           env: { DEMO_TOKEN: '${DEMO_TOKEN}' },

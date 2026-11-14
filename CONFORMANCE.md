@@ -16,6 +16,8 @@ Spécification : <https://microsoft.github.io/apm/specs/openapm-v01/> (brouillon
 | Sous-modules git dans `tree_sha256` | Mode `160000`, haché sur l'identifiant du commit (cas non couvert par la spec). |
 | Alias de dépendance (req-mf-025) | Validés et conservés ; sans effet sur le placement (pas de dossier `apm_modules/`). |
 | `repo_url` des paquets locaux | `_local/<dossier>`, comme l'écrit `apm`. La spec ne l'exige que pour git, mais `apm` 0.35.0 refuse un lockfile dont une entrée locale n'en a pas. |
+| Identité lue dans un lockfile | `repo_url` avec hôte (forme écrite, celle des exemples de la spec) ou sans hôte avec `host` à part (forme écrite par `apm`) : les deux désignent le même paquet. |
+| `mcp_target_servers` | Champ de l'outil `apm`, hors spec : écrit pour qu'`apm` reconnaisse les serveurs MCP gérés. |
 | Extension fournisseur | `x-ahub` par entrée du lockfile : cibles et registre de propriété des fichiers de configuration fusionnés. |
 
 ## Exigences évaluées

@@ -73,6 +73,8 @@ export interface Lockfile {
   dependencies: LockEntry[];
   mcp_servers?: string[];
   mcp_configs?: Record<string, unknown>;
+  /** Champ de l'outil apm : cible → serveurs MCP écrits pour elle. Il y lit la propriété des entrées. */
+  mcp_target_servers?: Record<string, string[]>;
   local_deployed_files?: string[];
   local_deployed_file_hashes?: Record<string, string>;
   [key: string]: unknown;
@@ -85,6 +87,7 @@ const TOP_ORDER = [
   'dependencies',
   'mcp_servers',
   'mcp_configs',
+  'mcp_target_servers',
   'local_deployed_files',
   'local_deployed_file_hashes',
 ];
@@ -127,7 +130,19 @@ const HASH_FIELDS = ['tree_sha256', 'content_hash', 'resolved_hash'];
 /** Clé d'identité d'une entrée : dépôt + sous-chemin, ou chemin local. */
 export function entryIdentity(entry: LockEntry): string {
   if (entry.source === 'local') return `local:${entry.local_path}`;
-  return entry.virtual_path ? `${entry.repo_url}/${entry.virtual_path}` : String(entry.repo_url);
+  const repo = canonicalRepoUrl(entry);
+  return entry.virtual_path ? `${repo}/${entry.virtual_path}` : repo;
+}
+
+/**
+ * Identité `hôte/propriétaire/dépôt` d'une entrée. L'outil apm écrit l'hôte à part
+ * (`repo_url: propriétaire/dépôt`, `host: github.com`) : les deux formes sont lues.
+ */
+export function canonicalRepoUrl(entry: LockEntry): string {
+  const repo = String(entry.repo_url);
+  const first = repo.split('/')[0] ?? '';
+  if (first.includes('.') || first === '_local') return repo;
+  return `${entry.host ?? 'github.com'}/${repo}`;
 }
 
 export function emptyLockfile(): Lockfile {

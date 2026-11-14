@@ -148,6 +148,12 @@ describe('cycle de vie complet', () => {
     expect(entry.resolved_at).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\+00:00$/);
     expect(Object.keys(entry.deployed_file_hashes).sort()).toEqual(entry.deployed_files);
     expect(lockJs.mcp_servers).toEqual(['demo-server']);
+    expect(lockJs.mcp_target_servers).toEqual({
+      claude: ['demo-server'],
+      codex: ['demo-server'],
+      copilot: ['demo-server'],
+      cursor: ['demo-server'],
+    });
     expect(listInstalled(await loadLock(ctx))[0]).toMatchObject({
       name: 'demo-pack',
       resolvedTag: 'v1.1.0',

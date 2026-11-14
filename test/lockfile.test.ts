@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   canonicalContent,
   canonicalTreeHash,
+  entryIdentity,
   fileHash,
   parseLockfile,
   parseYamlSafe,
@@ -70,6 +71,18 @@ describe('lockfile apm.lock.yaml (spec §5)', () => {
     expect(out).toContain('x-vendor');
     expect(out).toContain('x-top');
     expect(out).toContain('future_top: 3');
+  });
+
+  it('lit l’identité d’une entrée écrite par apm (hôte à part) comme la sienne', () => {
+    expect(entryIdentity({ repo_url: 'github.com/acme/tools' })).toBe('github.com/acme/tools');
+    expect(entryIdentity({ repo_url: 'acme/tools', host: 'github.com', virtual_path: 'pkg/a' })).toBe(
+      'github.com/acme/tools/pkg/a',
+    );
+    expect(entryIdentity({ repo_url: 'acme/tools' })).toBe('github.com/acme/tools');
+    expect(entryIdentity({ repo_url: 'acme/tools', host: 'gitlab.com' })).toBe('gitlab.com/acme/tools');
+    expect(entryIdentity({ repo_url: '_local/pkg', source: 'local', local_path: './pkg' })).toBe(
+      'local:./pkg',
+    );
   });
 
   it('refuse une version inconnue en proposant les deux issues (req-lk-004)', () => {

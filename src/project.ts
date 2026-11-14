@@ -433,6 +433,7 @@ export async function applyInstall(p: PreparedInstall, opts: InstallOptions = {}
 
     const lock: Lockfile = { ...(previous ?? emptyLockfile()), dependencies: [] };
     const mcpNames = new Set<string>();
+    const mcpByTarget: Record<string, Set<string>> = {};
     for (const pkg of p.internal.resolved) {
       const record = p.internal.prepared.records.get(pkg.identity)!;
       const report = p.packages.find((r) => r.identity === pkg.identity)!;
@@ -495,7 +496,12 @@ export async function applyInstall(p: PreparedInstall, opts: InstallOptions = {}
       if (record.merged.length > 0) ext.merged = record.merged;
       entry['x-ahub'] = ext;
       for (const m of record.merged) {
-        if (m.kind === 'mcp') for (const e of m.entries) mcpNames.add(e.keyPath[e.keyPath.length - 1]!);
+        if (m.kind !== 'mcp') continue;
+        for (const e of m.entries) {
+          const server = e.keyPath[e.keyPath.length - 1]!;
+          mcpNames.add(server);
+          (mcpByTarget[m.target] ??= new Set()).add(server);
+        }
       }
       lock.dependencies.push(entry);
     }
@@ -504,9 +510,16 @@ export async function applyInstall(p: PreparedInstall, opts: InstallOptions = {}
       lock.mcp_configs = Object.fromEntries(
         [...mcpNames].sort().map((n) => [n, p.internal.mcpConfigs[n] ?? {}]),
       );
+      // Lu par apm pour savoir quelles entrées MCP sont gérées, et ne pas les prendre pour celles de l'utilisateur.
+      lock.mcp_target_servers = Object.fromEntries(
+        Object.keys(mcpByTarget)
+          .sort()
+          .map((t) => [t, [...mcpByTarget[t]!].sort()]),
+      );
     } else {
       delete lock.mcp_servers;
       delete lock.mcp_configs;
+      delete lock.mcp_target_servers;
     }
 
     await mkdir(path.dirname(ctx.manifestPath), { recursive: true });
