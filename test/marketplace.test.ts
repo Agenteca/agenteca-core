@@ -135,6 +135,24 @@ describe('marketplaces natifs', () => {
     });
   });
 
+  it('n’exporte un plugin natif que vers son propre outil', () => {
+    const perTool = catalogFromManifestBlock(
+      {
+        packages: [
+          { name: 'pour-claude', source: 'acme/claude-plugin', nativePlugin: true, tools: ['claude'] },
+          { name: 'pour-codex', source: 'acme/codex-plugin', nativePlugin: true, tools: ['codex'] },
+          { name: 'partout', source: 'acme/any', nativePlugin: true },
+        ],
+      },
+      'x',
+    );
+    const names = (f: 'claude' | 'codex' | 'copilot') =>
+      (exportMarketplace(perTool, f).json.plugins as Array<{ name: string }>).map((p) => p.name);
+    expect(names('claude')).toEqual(['pour-claude', 'partout']);
+    expect(names('codex')).toEqual(['pour-codex', 'partout']);
+    expect(names('copilot')).toEqual(['partout']);
+  });
+
   it('fait l’aller-retour export Claude → lecture', () => {
     const out = exportMarketplace(catalog, 'claude');
     const { catalog: back } = parseMarketplace(out.json);

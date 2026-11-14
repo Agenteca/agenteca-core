@@ -190,6 +190,8 @@ export function exportMarketplace(
       });
       continue;
     }
+    // Un plugin natif ne vaut que pour son outil : il n'apparaît pas dans le marketplace des autres.
+    if (e.nativePlugin === true && e.tools && e.tools.length > 0 && !e.tools.includes(format)) continue;
     let ref: DepRef;
     try {
       ref = parseDepString(e.source);
