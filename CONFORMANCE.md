@@ -15,6 +15,7 @@ Spécification : <https://microsoft.github.io/apm/specs/openapm-v01/> (brouillon
 | `content_hash` des paquets locaux (§5.6.4) | SHA-256 de la liste triée `chemin NUL sha256(fichier)`, limitée aux fichiers de primitives. |
 | Sous-modules git dans `tree_sha256` | Mode `160000`, haché sur l'identifiant du commit (cas non couvert par la spec). |
 | Alias de dépendance (req-mf-025) | Validés et conservés ; sans effet sur le placement (pas de dossier `apm_modules/`). |
+| `repo_url` des paquets locaux | `_local/<dossier>`, comme l'écrit `apm`. La spec ne l'exige que pour git, mais `apm` 0.35.0 refuse un lockfile dont une entrée locale n'en a pas. |
 | Extension fournisseur | `x-ahub` par entrée du lockfile : cibles et registre de propriété des fichiers de configuration fusionnés. |
 
 ## Exigences évaluées
