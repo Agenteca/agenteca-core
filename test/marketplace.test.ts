@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   catalogFromManifestBlock,
   exportMarketplace,
+  inferRegistryKind,
   MARKETPLACE_PATHS,
   parseMarketplace,
+  registryNameFromUrl,
 } from '../src/index.js';
 
 describe('marketplaces natifs', () => {
