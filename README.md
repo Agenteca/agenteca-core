@@ -1,102 +1,116 @@
 # @agenteca/core
 
-Bibliothèque TypeScript d'Agenteca : elle lit des paquets d'agents IA dans des dépôts git et les déploie dans Claude Code, Codex, GitHub Copilot et Cursor.
+TypeScript library of Agenteca: it reads AI agent packages from git repositories and deploys them into Claude Code, Codex, GitHub Copilot and Cursor.
 
-Elle implémente le format **OpenAPM v0.1** (`apm.yml`, `apm.lock.yaml`) sans dépendre de l'outil `apm`. La CLI `ahub`, le serveur et les extensions s'appuient tous sur elle.
+It implements the **OpenAPM v0.1** format (`apm.yml`, `apm.lock.yaml`) without depending on the `apm` tool. The `ahub` CLI, the server and the editor extensions all build on it.
 
-> État : 0.1.0, non publiée sur npm. OpenAPM est lui-même un brouillon de travail (0.x) : le format peut changer.
+> Status: 0.1.0, not yet published on npm. OpenAPM itself is a working draft (0.x): the format may change.
 
-## Ce qu'elle fait
+## What it does
 
-| Domaine | Module | Standard suivi |
+| Area | Module | Standard followed |
 |---|---|---|
-| Manifeste | `manifest.ts`, `depref.ts` | OpenAPM §4 |
-| Lockfile et empreintes | `lockfile.ts`, `hash.ts` | OpenAPM §5 |
-| Résolution des versions | `resolver.ts`, `git.ts` | OpenAPM §7, SemVer (dialecte node-semver) |
-| Lecture des paquets | `package.ts` | OpenAPM §8.1, Agent Skills |
-| Adaptateurs par outil | `adapters/` | Matrice des cibles OpenAPM, docs de chaque outil |
-| Déploiement et retrait | `deploy.ts`, `merge.ts` | — |
-| Scan de sécurité | `scan.ts` | SARIF 2.1.0 |
-| Marketplaces et registres | `marketplace.ts`, `registry.ts` | Formats natifs Claude Code, Codex, Copilot CLI, Cursor |
+| Manifest | `manifest.ts`, `depref.ts` | OpenAPM §4 |
+| Lockfile and hashes | `lockfile.ts`, `hash.ts` | OpenAPM §5 |
+| Version resolution | `resolver.ts`, `git.ts` | OpenAPM §7, SemVer (node-semver dialect) |
+| Package reading | `package.ts` | OpenAPM §8.1, Agent Skills |
+| Per-tool adapters | `adapters/` | OpenAPM target matrix, documentation of each tool |
+| Deployment and removal | `deploy.ts`, `merge.ts` | — |
+| Security scan | `scan.ts` | SARIF 2.1.0 |
+| Marketplaces and registries | `marketplace.ts`, `registry.ts` | Native formats of Claude Code, Codex, Copilot CLI, Cursor |
+| Messages in five languages | `i18n.ts`, `locales/` | — |
 
-Le détail de la conformité, exigence par exigence, est dans [CONFORMANCE.md](CONFORMANCE.md).
+Conformance, requirement by requirement, is detailed in [CONFORMANCE.md](CONFORMANCE.md).
 
-## Utilisation
+## Usage
 
 ```ts
 import { applyInstall, createContext, parseDepString, prepareInstall } from '@agenteca/core';
 
 const ctx = createContext({ cwd: process.cwd() });
 
-// 1. Préparer : résolution, lecture, scan, plan. Rien n'est écrit.
+// 1. Prepare: resolution, reading, scan, plan. Nothing is written.
 const prepared = await prepareInstall(ctx, {
   add: [parseDepString('acme/code-review#^1.0.0')],
   targets: ['claude', 'cursor'],
-  initName: 'mon-projet',
+  initName: 'my-project',
 });
 console.log(prepared.plan.files, prepared.executables, prepared.findings);
 
-// 2. Appliquer, après accord de l'utilisateur.
+// 2. Apply, once the user has agreed.
 await applyInstall(prepared);
 ```
 
-`prepareInstall` couvre aussi le rejeu du lockfile (`{ frozen: true }`), la mise à jour (`{ update: 'all' }`) et le retrait (`{ remove: ['code-review'] }`).
+`prepareInstall` also covers lockfile replay (`{ frozen: true }`), updates (`{ update: 'all' }`) and removal (`{ remove: ['code-review'] }`).
 
-## Où vont les fichiers
+## Where files go
 
-Portée projet. En portée utilisateur, les mêmes dossiers sous `~` (`~/.copilot/` pour Copilot, `~/.claude.json` pour le MCP de Claude Code).
+Project scope. In user scope, the same folders under `~` (`~/.copilot/` for Copilot, `~/.claude.json` for Claude Code's MCP servers).
 
-| Outil | Agents | Skills | Commandes | Instructions | Hooks | MCP |
+| Tool | Agents | Skills | Commands | Instructions | Hooks | MCP |
 |---|---|---|---|---|---|---|
 | Claude Code | `.claude/agents/*.md` | `.claude/skills/` | `.claude/commands/*.md` | `.claude/rules/*.md` | `.claude/settings.json` | `.mcp.json` |
-| Codex | `.codex/agents/*.toml` | `.agents/skills/` | converties en skills | non déployées | `.codex/hooks.json` | `.codex/config.toml` |
+| Codex | `.codex/agents/*.toml` | `.agents/skills/` | converted to skills | not deployed | `.codex/hooks.json` | `.codex/config.toml` |
 | Copilot | `.github/agents/*.agent.md` | `.agents/skills/` | `.github/prompts/*.prompt.md` | `.github/instructions/` | `.github/hooks/*.json` | `.vscode/mcp.json` + `.github/mcp.json` |
 | Cursor | `.cursor/agents/*.md` | `.agents/skills/` | `.cursor/commands/*.md` | `.cursor/rules/*.mdc` | `.cursor/hooks.json` | `.cursor/mcp.json` |
 
-Chemins vérifiés dans la documentation officielle de chaque outil le 10 novembre 2026.
+Paths checked against the official documentation of each tool on 10 November 2026.
 
-## Sécurité
+## Security
 
-Un agent est du texte exécuté par un modèle : il est traité comme du code.
+An agent is text executed by a model: it is treated as code.
 
-- **Scan avant tout déploiement.** Un constat critique (Unicode caché, téléchargement exécuté) bloque l'installation ; le contournement est explicite (`allowUnsafe`).
-- **Aucun script exécuté.** `scripts:` et `lifecycle:` des paquets sont ignorés. Git est appelé sans hooks, sans invite, liens symboliques neutralisés.
-- **Rien n'est écrasé en silence.** Un fichier modifié à la main, ou existant sans être géré, bloque l'opération tant que l'utilisateur n'a pas donné son accord pour ce fichier.
-- **Fichiers de configuration partagés** (`settings.json`, `.mcp.json`, `config.toml`…) : seules les entrées du paquet sont ajoutées puis retirées ; le reste du fichier n'est pas réécrit.
-- **Empreintes.** `tree_sha256` par dépôt et SHA-256 par fichier déployé, vérifiées au rejeu.
-- **Chemins.** Toute écriture hors de la racine, ou à travers un lien symbolique, est refusée.
+- **Scan before any deployment.** A critical finding (hidden Unicode, downloaded code executed) blocks the installation; overriding it is explicit (`allowUnsafe`).
+- **No script is run.** The `scripts:` and `lifecycle:` fields of packages are ignored. Git is called without hooks or prompts, and symbolic links are neutralised.
+- **Nothing is overwritten silently.** A file edited by hand, or present without being managed, blocks the operation until the user agrees for that file.
+- **Shared configuration files** (`settings.json`, `.mcp.json`, `config.toml`…): only the entries of the package are added, then removed; the rest of the file is never rewritten.
+- **Hashes.** `tree_sha256` per repository and SHA-256 per deployed file, checked on replay.
+- **Paths.** Any write outside the root, or through a symbolic link, is refused.
 
-Les règles du scan sont listées dans `src/scan.ts` (`RULES`). Le scan repère des motifs connus ; il ne prouve pas qu'un paquet est sûr.
+The scan rules are listed in `src/scan.ts` (`RULES`). The scan spots known patterns; it does not prove that a package is safe.
 
-## Limites connues (v0.1)
+## Languages
 
-- **Hooks avec scripts.** Un hook dont la commande pointe vers un script du paquet (`${PLUGIN_ROOT}/…`, `./…`) est ignoré avec un avertissement. Seules les commandes en ligne sont déployées.
-- **Hooks non portables.** Les noms d'événements sont traduits par table ; un événement sans équivalent est ignoré avec un avertissement. Les données reçues par le hook diffèrent d'un outil à l'autre et ne sont pas adaptées.
-- **Copilot et filtres de hook.** Copilot n'a pas de filtre par outil : un hook filtré (`matcher`) n'y est pas déployé, pour ne pas l'élargir à tous les outils.
-- **Serveurs MCP de registre.** Seuls les serveurs auto-définis (`registry: false`) sont déployés.
-- **Outils d'agent.** Les noms d'outils (`tools:`) sont propres à chaque produit. Ils sont transmis tels quels à Claude Code et abandonnés pour Codex et Cursor, avec un avertissement dans les deux cas.
-- **Codex.** Pas d'instructions par fichier (Codex ne lit que `AGENTS.md`) ; la compilation d'`AGENTS.md` n'est pas implémentée.
-- **Dépendances de registre** (`id:`), `git: parent`, primitives propres au projet (`local_deployed_files`) : non pris en charge.
-- **Miroirs git complets.** Chaque dépôt est cloné en entier dans le cache (`~/.cache/ahub`).
+Messages shown to people (errors, warnings, scan findings) are written in English in the code and translated into French, Spanish, Chinese and Hindi. The language comes from `setLocale()`; `detectLocale()` reads `AHUB_LANG`, then `LC_ALL`, `LC_MESSAGES` and `LANG`. Other packages add their own messages with `registerCatalog()`.
 
-## Points non confirmés par les documentations officielles
+To add or change a message:
 
-- Claude Code ne documente pas la lecture de `.agents/skills/` : les skills y vont dans `.claude/skills/`.
-- Le dossier utilisateur des commandes Cursor (`~/.cursor/commands`) n'est pas documenté : les commandes ne sont pas déployées en portée utilisateur pour Cursor.
-- Les champs exacts de la source `url` d'un marketplace Codex ne sont pas documentés : l'export Codex utilise `{ source, url, ref }` par analogie avec `git-subdir`.
-- La lecture de `.claude-plugin/marketplace.json` par la CLI Codex n'est pas confirmée.
+1. write it in English, as a literal: `t('package "{0}" is not a folder', [name])`;
+2. add its translation to each file of `src/locales/` (keys sorted);
+3. run `npm test`: `test/i18n.test.ts` fails if a translation is missing, unused, or has different placeholders.
 
-## Variables d'environnement
+Error codes, JSON fields and the content of deployed files never depend on the language.
 
-| Variable | Rôle |
+## Known limits (v0.1)
+
+- **Hooks with scripts.** A hook whose command points to a script of the package (`${PLUGIN_ROOT}/…`, `./…`) is skipped with a warning. Only inline commands are deployed.
+- **Hooks are not portable.** Event names are translated through a table; an event with no equivalent is skipped with a warning. The data a hook receives differs between tools and is not adapted.
+- **Copilot and hook matchers.** Copilot has no per-tool matcher: a hook with a `matcher` is not deployed there, so that it is not widened to every tool.
+- **Registry MCP servers.** Only self-defined servers (`registry: false`) are deployed.
+- **Agent tools.** Tool names (`tools:`) are specific to each product. They are passed as is to Claude Code and dropped for Codex and Cursor, with a warning in both cases.
+- **Codex.** No per-file instructions (Codex only reads `AGENTS.md`); compiling `AGENTS.md` is not implemented.
+- **Registry dependencies** (`id:`), `git: parent`, project-specific primitives (`local_deployed_files`): not supported.
+- **Full git mirrors.** Each repository is cloned entirely into the cache (`~/.cache/ahub`).
+
+## Points not confirmed by the official documentation
+
+- Claude Code does not document reading `.agents/skills/`: skills go to `.claude/skills/` for it.
+- Cursor's user folder for commands (`~/.cursor/commands`) is not documented: commands are not deployed in user scope for Cursor.
+- The exact fields of the `url` source of a Codex marketplace are not documented: the Codex export uses `{ source, url, ref }` by analogy with `git-subdir`.
+- Reading `.claude-plugin/marketplace.json` from the Codex CLI is not confirmed.
+
+## Environment variables
+
+| Variable | Purpose |
 |---|---|
-| `AHUB_CACHE_DIR` | Dossier du cache git (défaut : `~/.cache/ahub`). |
-| `AHUB_GIT_MIRRORS` | Objet JSON `{"hôte/propriétaire/dépôt": "url ou chemin"}` : remplace l'URL de clonage (miroirs d'entreprise, tests). |
-| `AHUB_HOME` | Remplace le dossier personnel (tests). |
-| `AHUB_CONFIG` | Chemin du fichier de configuration (défaut : `~/.config/ahub/config.json`). |
-| `AHUB_USER_DIR` | Dossier du manifeste utilisateur (défaut : `~/.apm`). |
+| `AHUB_LANG` | Language of the messages: `en`, `fr`, `es`, `zh`, `hi`. |
+| `AHUB_CACHE_DIR` | Folder of the git cache (default: `~/.cache/ahub`). |
+| `AHUB_GIT_MIRRORS` | JSON object `{"host/owner/repo": "url or path"}`: replaces the clone URL (company mirrors, tests). |
+| `AHUB_HOME` | Replaces the home folder (tests). |
+| `AHUB_CONFIG` | Path of the configuration file (default: `~/.config/ahub/config.json`). |
+| `AHUB_USER_DIR` | Folder of the user manifest (default: `~/.apm`). |
 
-## Développement
+## Development
 
 ```bash
 npm install
@@ -106,8 +120,8 @@ npm install
 npm test
 ```
 
-Les tests créent de vrais dépôts git dans des dossiers temporaires ; aucun accès réseau. `git` doit être installé.
+The tests create real git repositories in temporary folders; no network access. `git` must be installed.
 
-## Licence
+## License
 
-Apache-2.0. Les schémas JSON OpenAPM de `vendor/openapm/` sont © Microsoft, sous Apache-2.0 (voir `NOTICE`).
+Apache-2.0. The OpenAPM JSON schemas in `vendor/openapm/` are © Microsoft, under Apache-2.0 (see `NOTICE`).
