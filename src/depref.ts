@@ -5,16 +5,16 @@ export const IMPLEMENTATION_DEFAULT_HOST = 'github.com';
 
 export type UrlForm = 'shorthand' | 'https' | 'http' | 'ssh' | 'scp';
 
-/** Référence de dépendance OpenAPM analysée (spec §4.3). */
+/** Parsed OpenAPM dependency reference (spec §4.3). */
 export interface DepRef {
   kind: 'git' | 'local' | 'registry';
-  /** Forme d'URL d'origine, conservée pour construire l'URL de clonage. */
+  /** Original URL form, kept to build the clone URL. */
   form?: UrlForm;
   host?: string;
   port?: number;
   owner?: string;
   repo?: string;
-  /** Identité canonique du dépôt : `hôte/propriétaire/dépôt`. */
+  /** Canonical identity of the repository: `host/owner/repo`. */
   repoUrl?: string;
   virtualPath?: string;
   ref?: string;
@@ -22,7 +22,7 @@ export interface DepRef {
   alias?: string;
   skills?: string[];
   targets?: string[];
-  /** Entrée `id:` (registre REST) : conservée, non résolue en v0.1. */
+  /** `id:` entry (REST registry): kept, not resolved in v0.1. */
   registryId?: string;
 }
 
@@ -77,7 +77,7 @@ function finishGit(
   return out;
 }
 
-/** Analyse la forme chaîne d'une dépendance (ABNF de la spec §4.3.1, req-mf-007). */
+/** Parses the string form of a dependency (ABNF of spec §4.3.1, req-mf-007). */
 export function parseDepString(input: string, defaultHost = IMPLEMENTATION_DEFAULT_HOST): DepRef {
   const entry = input.trim();
   if (!entry) bad(input, t('empty string'));
@@ -106,7 +106,7 @@ export function parseDepString(input: string, defaultHost = IMPLEMENTATION_DEFAU
 
   const segments = main.split('/');
   if (segments.some((s) => s.length === 0)) bad(entry, t('empty segment'));
-  // Raccourci avec hôte : le premier segment est un nom de domaine (contient un point).
+  // Shorthand with a host: the first segment is a domain name (contains a dot).
   if (segments.length >= 3 && segments[0]!.includes('.') && HOST_RE.test(segments[0]!)) {
     return finishGit(entry, 'shorthand', segments[0]!, undefined, segments.slice(1), ref);
   }
@@ -122,7 +122,7 @@ function asStringList(value: unknown, entryLabel: string, field: string): string
   return list as string[];
 }
 
-/** Analyse une entrée `dependencies.apm[]`, forme chaîne ou forme objet (spec §4.3.2). */
+/** Parses a `dependencies.apm[]` entry, string form or object form (spec §4.3.2). */
 export function parseDepEntry(entry: unknown, defaultHost = IMPLEMENTATION_DEFAULT_HOST): DepRef {
   if (typeof entry === 'string') return parseDepString(entry, defaultHost);
   if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
@@ -174,7 +174,7 @@ export function parseDepEntry(entry: unknown, defaultHost = IMPLEMENTATION_DEFAU
   return ref;
 }
 
-/** Clé d'identité d'une dépendance : dépôt + sous-chemin, ou chemin local. */
+/** Identity key of a dependency: repository + subpath, or local path. */
 export function depIdentity(ref: DepRef): string {
   if (ref.kind === 'local') return `local:${ref.localPath}`;
   if (ref.kind === 'registry') return `registry:${ref.registryId}`;
@@ -182,8 +182,8 @@ export function depIdentity(ref: DepRef): string {
 }
 
 /**
- * Forme canonique d'écriture (req-mf-009) : seul l'hôte par défaut est retiré ;
- * les autres hôtes gardent leur nom complet.
+ * Canonical written form (req-mf-009): only the default host is removed;
+ * other hosts keep their full name.
  */
 export function canonicalDepString(ref: DepRef, defaultHost = IMPLEMENTATION_DEFAULT_HOST): string {
   if (ref.kind === 'local') return ref.localPath!;
@@ -205,7 +205,7 @@ export function canonicalDepString(ref: DepRef, defaultHost = IMPLEMENTATION_DEF
   return base;
 }
 
-/** URL de clonage git correspondant à la référence. */
+/** git clone URL matching the reference. */
 export function cloneUrl(ref: DepRef): string {
   if (ref.kind !== 'git') throw new AhubError('INTERNAL', t('cloneUrl: not a git reference'));
   const hostPort = `${ref.host}${ref.port ? `:${ref.port}` : ''}`;
@@ -221,7 +221,7 @@ export function cloneUrl(ref: DepRef): string {
   }
 }
 
-/** Un chemin virtuel désigne un fichier seulement d'après son extension (req-mf-008). */
+/** A virtual path designates a file only from its extension (req-mf-008). */
 export function isVirtualFile(virtualPath: string): boolean {
   return /\.(prompt|instructions|agent)\.md$/.test(virtualPath);
 }
@@ -230,9 +230,9 @@ export type CliPackageArg =
   { type: 'dep'; dep: string } | { type: 'catalog'; name: string; registry?: string };
 
 /**
- * Interprète l'argument de `ahub add`.
- * Écart de confort documenté : `owner/repo@tag` est accepté et réécrit en
- * `owner/repo#tag` ; `nom` ou `nom@registre` (sans `/`) désigne un paquet de catalogue.
+ * Interprets the argument of `ahub add`.
+ * Documented convenience deviation: `owner/repo@tag` is accepted and rewritten as
+ * `owner/repo#tag`; `name` or `name@registry` (without `/`) designates a catalog package.
  */
 export function parseCliPackageArg(arg: string): CliPackageArg {
   const a = arg.trim();

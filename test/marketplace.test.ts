@@ -9,7 +9,7 @@ import {
 } from '../src/index.js';
 
 describe('marketplaces natifs', () => {
-  it('lit un marketplace au format Claude Code / Copilot CLI', () => {
+  it('reads a marketplace in the Claude Code / Copilot CLI format', () => {
     const { catalog, diagnostics } = parseMarketplace(
       {
         name: 'acme-tools',
@@ -54,7 +54,7 @@ describe('marketplaces natifs', () => {
     expect(diagnostics.map((d) => d.code)).toEqual(['MARKETPLACE_SOURCE_UNSUPPORTED']);
   });
 
-  it('lit le format Codex (interface.displayName, source local)', () => {
+  it('reads the Codex format (interface.displayName, local source)', () => {
     const { catalog } = parseMarketplace(
       {
         name: 'codex-mkt',
@@ -68,7 +68,7 @@ describe('marketplaces natifs', () => {
     expect(catalog.entries[0]!.source).toBe('/srv/mkt/p');
   });
 
-  it('refuse les sources relatives qui remontent hors du dépôt', () => {
+  it('refuses relative sources that climb out of the repository', () => {
     const { catalog } = parseMarketplace(
       { name: 'm', plugins: [{ name: 'x', source: './../../etc' }] },
       { baseRepo: 'a/b' },
@@ -95,7 +95,7 @@ describe('marketplaces natifs', () => {
     'agenteca',
   );
 
-  it('lit le bloc marketplace: d’un apm.yml', () => {
+  it('reads the marketplace: block of an apm.yml', () => {
     expect(catalog.entries[0]).toMatchObject({
       name: 'hello-agent',
       source: 'agenteca/agenteca-registry/examples/hello-agent#v0.1.0',
@@ -103,7 +103,7 @@ describe('marketplaces natifs', () => {
     expect(catalog.owner).toEqual({ name: 'Agenteca', url: 'https://github.com/agenteca' });
   });
 
-  it('exporte au format Claude Code, en n’incluant que les plugins natifs', () => {
+  it('exports to the Claude Code format, including only native plugins', () => {
     const out = exportMarketplace(catalog, 'claude');
     expect(out.path).toBe(MARKETPLACE_PATHS.claude);
     expect(out.json).toMatchObject({ name: 'agenteca', owner: { name: 'Agenteca' } });
@@ -119,7 +119,7 @@ describe('marketplaces natifs', () => {
     expect(out.diagnostics.map((d) => d.code)).toEqual(['EXPORT_NOT_NATIVE_PLUGIN']);
   });
 
-  it('exporte aux formats Copilot et Codex', () => {
+  it('exports to the Copilot and Codex formats', () => {
     const copilot = exportMarketplace(catalog, 'copilot').json.plugins as Array<Record<string, any>>;
     expect(copilot[0]!.source).toEqual({
       source: 'github',
@@ -137,7 +137,7 @@ describe('marketplaces natifs', () => {
     });
   });
 
-  it('n’exporte un plugin natif que vers son propre outil', () => {
+  it('exports a native plugin only to its own tool', () => {
     const perTool = catalogFromManifestBlock(
       {
         packages: [
@@ -155,7 +155,7 @@ describe('marketplaces natifs', () => {
     expect(names('copilot')).toEqual(['partout']);
   });
 
-  it('déduit le type et le nom d’un registre', () => {
+  it('infers the type and the name of a registry', () => {
     for (const p of ['.', '..', './cat', '../cat', '/srv/cat', '~/cat'])
       expect(inferRegistryKind(p), p).toBe('path');
     for (const g of [
@@ -170,7 +170,7 @@ describe('marketplaces natifs', () => {
     expect(registryNameFromUrl('https://github.com/acme/Mon_Catalogue.git')).toBe('mon-catalogue');
   });
 
-  it('fait l’aller-retour export Claude → lecture', () => {
+  it('round-trips Claude export → reading', () => {
     const out = exportMarketplace(catalog, 'claude');
     const { catalog: back } = parseMarketplace(out.json);
     expect(back.entries.map((e) => e.source)).toEqual([

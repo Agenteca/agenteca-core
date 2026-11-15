@@ -5,20 +5,20 @@ export function sha256Hex(data: Uint8Array | string): string {
   return createHash('sha256').update(data).digest('hex');
 }
 
-/** Enveloppe `<algo>:<hex>` exigée par req-lk-016. */
+/** `<algo>:<hex>` envelope required by req-lk-016. */
 export function envelope(hex: string): string {
   return `sha256:${hex}`;
 }
 
-/** Accepte l'enveloppe ou l'hexadécimal nu (tolérance de lecture v0.1). */
+/** Accepts the envelope or bare hexadecimal (reading tolerance of v0.1). */
 export function normalizeEnvelope(value: string): string {
   return /^[0-9a-f]{64}$/.test(value) ? `sha256:${value}` : value;
 }
 
 /**
- * Contenu canonique d'un fichier déployé (req-lk-012) : pour un fichier texte
- * (UTF-8 valide, sans octet NUL) chaque `\r\n` devient `\n` ; un fichier
- * binaire est haché tel quel.
+ * Canonical content of a deployed file (req-lk-012): for a text file
+ * (valid UTF-8, no NUL byte) each `\r\n` becomes `\n`; a binary
+ * file is hashed as is.
  */
 export function canonicalContent(bytes: Buffer): Buffer {
   if (bytes.includes(0) || !isUtf8(bytes)) return bytes;
@@ -39,13 +39,13 @@ export function fileHash(bytes: Buffer): string {
 export interface TreeEntry {
   mode: string;
   name: string;
-  /** SHA-256 hexadécimal du blob, ou de la représentation canonique du sous-arbre. */
+  /** Hexadecimal SHA-256 of the blob, or of the canonical representation of the subtree. */
   sha256: string;
 }
 
 /**
- * Représentation canonique d'un arbre git (spec §5.6.4) :
- * `<mode> SP <nom> SP <sha256> LF`, entrées triées octet par octet sur le nom.
+ * Canonical representation of a git tree (spec §5.6.4):
+ * `<mode> SP <name> SP <sha256> LF`, entries sorted byte by byte on the name.
  */
 export function canonicalTreeHash(entries: TreeEntry[]): string {
   const sorted = [...entries].sort((a, b) => Buffer.compare(Buffer.from(a.name), Buffer.from(b.name)));
@@ -54,7 +54,7 @@ export function canonicalTreeHash(entries: TreeEntry[]): string {
   return h.digest('hex');
 }
 
-/** JSON canonique (clés triées) pour produire des empreintes stables. */
+/** Canonical JSON (sorted keys) to produce stable hashes. */
 export function stableStringify(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;

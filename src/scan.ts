@@ -27,9 +27,9 @@ export interface ScanInput {
 }
 
 /**
- * Règles du scan. Les classes de points de code reprennent l'état de l'art
- * (scanner d'APM, Cisco skill-scanner, « Trojan Source ») ; AHUB-U007
- * (homoglyphes) et les règles AHUB-P* sont propres à Agenteca.
+ * Rules of the scan. The classes of code points follow the state of the art
+ * (APM's scanner, Cisco skill-scanner, "Trojan Source"); AHUB-U007
+ * (homoglyphs) and the AHUB-P* rules are specific to Agenteca.
  */
 export const RULES: ScanRule[] = [
   {
@@ -169,7 +169,7 @@ function codepointRule(cp: number, atStart: boolean): string | undefined {
 
 const hex = (cp: number): string => `U+${cp.toString(16).toUpperCase().padStart(4, '0')}`;
 
-// Lettres cyrilliques et grecques confondables avec des lettres latines.
+// Cyrillic and Greek letters that can be confused with Latin letters.
 const CONFUSABLE = /[аеорсухіјһАВЕКМНОРСТХοανρΑΒΕΗΙΚΜΝΟΡΤΧ]/;
 const LATIN = /[A-Za-z]/;
 const WORD = /[\p{L}\p{N}_.-]+/gu;
@@ -229,7 +229,7 @@ function isProbablyText(bytes: Buffer): boolean {
   return !bytes.subarray(0, 8000).includes(0);
 }
 
-/** Analyse un fichier. Les fichiers binaires ne sont pas inspectés. */
+/** Scans a file. Binary files are not inspected. */
 export function scanFile(input: ScanInput): Finding[] {
   const findings: Finding[] = [];
   const { path: filePath, bytes } = input;
@@ -244,7 +244,7 @@ export function scanFile(input: ScanInput): Finding[] {
   const textContent = bytes.toString('utf8');
   const lines = textContent.split(/\r\n|\n|\r/);
 
-  // Un seul constat par règle et par ligne, pour rester lisible.
+  // A single finding per rule and per line, to stay readable.
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
     const seen = new Set<string>();

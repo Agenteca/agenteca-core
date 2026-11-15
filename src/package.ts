@@ -9,7 +9,7 @@ import { t } from './i18n.js';
 export type PackageLayout = 'apm_package' | 'skill_bundle' | 'skill_collection' | 'plugin' | 'hook_package';
 
 export interface PkgFile {
-  /** Chemin relatif (POSIX) à la racine de la primitive ou du paquet. */
+  /** Relative (POSIX) path to the root of the primitive or of the package. */
   relPath: string;
   bytes: Buffer;
   executable: boolean;
@@ -19,9 +19,9 @@ export interface SkillPrimitive {
   kind: 'skill';
   name: string;
   description?: string;
-  /** Chemin du dossier du skill dans le paquet. */
+  /** Path of the skill's folder in the package. */
   sourceDir: string;
-  /** Fichiers du skill, chemins relatifs au dossier du skill. */
+  /** Files of the skill, paths relative to the skill's folder. */
   files: PkgFile[];
 }
 
@@ -30,13 +30,13 @@ export interface TextPrimitive {
   name: string;
   sourcePath: string;
   frontmatter: Record<string, unknown> | null;
-  /** Le frontmatter existe mais n'a pas pu être lu comme dictionnaire. */
+  /** The front matter exists but could not be read as a mapping. */
   frontmatterError?: string;
   body: string;
   raw: Buffer;
 }
 
-/** Groupe de hooks normalisé (forme Claude : filtre optionnel + gestionnaires). */
+/** Normalised group of hooks (Claude form: optional matcher + handlers). */
 export interface HookGroup {
   matcher?: string;
   hooks: Array<Record<string, unknown>>;
@@ -46,7 +46,7 @@ export interface HookPrimitive {
   kind: 'hook';
   name: string;
   sourcePath: string;
-  /** Nom d'événement tel qu'écrit par l'auteur → groupes. */
+  /** Event name as written by the author → groups. */
   events: Record<string, HookGroup[]>;
   raw: Buffer;
 }
@@ -64,7 +64,7 @@ export interface PackageContent {
   instructions: TextPrimitive[];
   hooks: HookPrimitive[];
   mcp: McpDependency[];
-  /** Tous les fichiers sources pris en compte, pour le scan et l'aperçu. */
+  /** Every source file taken into account, for the scan and the preview. */
   sourceFiles: PkgFile[];
   diagnostics: Diagnostic[];
 }
@@ -90,8 +90,8 @@ async function isFile(p: string): Promise<boolean> {
 }
 
 /**
- * Parcourt un dossier sans jamais suivre de lien symbolique. Les liens, les
- * fichiers trop gros et `.git` sont ignorés avec un diagnostic.
+ * Walks a folder without ever following a symbolic link. Links,
+ * files that are too large and `.git` are skipped with a diagnostic.
  */
 async function walk(root: string, rel: string, diagnostics: Diagnostic[], out: PkgFile[]): Promise<void> {
   const abs = rel ? path.join(root, rel) : root;
@@ -163,7 +163,7 @@ async function readSkill(
       path: where,
     });
   } else {
-    // Contrôles du standard Agent Skills (agentskills.io/specification).
+    // Checks of the Agent Skills standard (agentskills.io/specification).
     const fmName = frontmatter.name;
     if (typeof fmName !== 'string' || !SKILL_NAME_RE.test(fmName) || fmName.length > 64) {
       diagnostics.push({
@@ -257,7 +257,7 @@ async function readTextPrimitives(
   return out;
 }
 
-/** Normalise un fichier de hooks : forme `{"hooks": {...}}` ou forme « nue » par événement. */
+/** Normalises a hooks file: `{"hooks": {...}}` form or "bare" form keyed by event. */
 export function normalizeHookDocument(json: unknown): Record<string, HookGroup[]> | undefined {
   if (json === null || typeof json !== 'object' || Array.isArray(json)) return undefined;
   let events = json as Record<string, unknown>;
@@ -281,7 +281,7 @@ export function normalizeHookDocument(json: unknown): Record<string, HookGroup[]
         if (typeof o.matcher === 'string') g.matcher = o.matcher;
         groups.push(g);
       } else {
-        // Forme Copilot : le gestionnaire est directement dans la liste.
+        // Copilot form: the handler is directly in the list.
         const handler: Record<string, unknown> = { ...o };
         if (handler.command === undefined && typeof handler.bash === 'string') handler.command = handler.bash;
         if (handler.timeout === undefined && typeof handler.timeoutSec === 'number')
@@ -352,7 +352,7 @@ async function readHooks(
   return out;
 }
 
-/** Convertit un bloc `mcpServers` de plugin (format Claude) en dépendances MCP. */
+/** Converts a plugin `mcpServers` block (Claude format) into MCP dependencies. */
 function mcpFromPluginConfig(json: unknown): McpDependency[] {
   if (json === null || typeof json !== 'object') return [];
   const root = json as Record<string, unknown>;
@@ -408,8 +408,8 @@ function dedupeByName<T extends { name: string }>(items: T[], kind: string, diag
 }
 
 /**
- * Découvre le contenu d'un paquet matérialisé sur disque. La disposition sur
- * disque fait foi, pas le champ `type` du manifeste (spec §8.1).
+ * Discovers the content of a package materialised on disk. The layout on
+ * disk is authoritative, not the `type` field of the manifest (spec §8.1).
  */
 export async function readPackage(dir: string, fallbackName: string): Promise<PackageContent> {
   if (!(await isDir(dir))) {
@@ -452,7 +452,7 @@ export async function readPackage(dir: string, fallbackName: string): Promise<Pa
   if (manifest?.license) content.license = manifest.license;
 
   if (manifest || hasApmDir) {
-    // Paquet APM : un `apm.yml` éligible prime sur la disposition plugin.
+    // APM package: an eligible `apm.yml` takes precedence over the plugin layout.
     content.layout = 'apm_package';
     content.skills.push(...(await readSkillsDir(dir, '.apm/skills', diagnostics)));
     content.agents.push(...(await readTextPrimitives(dir, '.apm/agents', 'agent', '.agent.md', diagnostics)));
@@ -481,7 +481,7 @@ export async function readPackage(dir: string, fallbackName: string): Promise<Pa
     if (typeof pluginJson?.version === 'string') content.version = pluginJson.version;
     if (typeof pluginJson?.description === 'string') content.description = pluginJson.description;
     if (typeof pluginJson?.license === 'string') content.license = pluginJson.license;
-    // req-pr-006 : une clé `skills` présente remplace la découverte conventionnelle.
+    // req-pr-006: a `skills` key, when present, replaces conventional discovery.
     if (pluginJson && 'skills' in pluginJson) {
       const declared = Array.isArray(pluginJson.skills) ? pluginJson.skills : [pluginJson.skills];
       for (const d of declared) {
@@ -528,7 +528,7 @@ export async function readPackage(dir: string, fallbackName: string): Promise<Pa
   content.instructions = dedupeByName(content.instructions, t('instruction'), diagnostics);
   content.mcp = dedupeByName(content.mcp, t('MCP server'), diagnostics);
 
-  // Fichiers sources retenus, pour le scan de sécurité et l'aperçu avant installation.
+  // Source files kept, for the security scan and the preview before installation.
   const seen = new Set<string>();
   const add = (relPath: string, bytes: Buffer, executable = false): void => {
     if (seen.has(relPath)) return;
@@ -555,7 +555,7 @@ async function readRootSkill(
   name: string,
   diagnostics: Diagnostic[],
 ): Promise<SkillPrimitive | undefined> {
-  // Le nom du skill racine vient de son frontmatter s'il est valide, sinon du nom du paquet.
+  // The name of the root skill comes from its front matter if it is valid, otherwise from the name of the package.
   const md = await readFile(path.join(dir, 'SKILL.md'), 'utf8');
   const { frontmatter } = splitFrontmatter(md, 'SKILL.md');
   const fmName =
@@ -566,14 +566,14 @@ async function readRootSkill(
   return readSkill(dir, skillName, '.', diagnostics);
 }
 
-/** Résumé sérialisable du contenu d'un paquet (sans les octets). */
+/** Serialisable summary of the content of a package (without the bytes). */
 export interface PackageSummary {
   layout: PackageLayout;
   name: string;
   version?: string;
   description?: string;
   license?: string;
-  /** Cibles déclarées par le manifeste du paquet, s'il en déclare. */
+  /** Targets declared by the package's manifest, if it declares any. */
   declaredTargets?: string[];
   skills: Array<{ name: string; description?: string; files: string[] }>;
   agents: string[];

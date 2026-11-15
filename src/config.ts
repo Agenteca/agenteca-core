@@ -6,13 +6,13 @@ import { AhubError } from './errors.js';
 import { t } from './i18n.js';
 
 /**
- * Configuration propre à ahub (liste des registres). Aucun standard ne couvre
- * ce besoin : exception documentée, fichier `~/.config/ahub/config.json` (XDG).
+ * Configuration specific to ahub (list of registries). No standard covers
+ * this need: documented exception, file `~/.config/ahub/config.json` (XDG).
  */
 export interface RegistryConfig {
   name: string;
   url: string;
-  /** `server` : API Agenteca ; `git` : dépôt publiant un marketplace.json ; `path` : dossier local. */
+  /** `server`: Agenteca API; `git`: repository publishing a marketplace.json; `path`: local folder. */
   kind: 'server' | 'git' | 'path';
 }
 
@@ -43,7 +43,7 @@ export async function saveConfig(config: AhubConfig, env: NodeJS.ProcessEnv = pr
   await writeFile(file, JSON.stringify(config, null, 2) + '\n');
 }
 
-/** Déduit le type de registre d'une URL ou d'un chemin. */
+/** Infers the registry type from a URL or a path. */
 export function inferRegistryKind(url: string): RegistryConfig['kind'] {
   if (/^(\.{1,2}(\/|$)|\/|~\/)/.test(url)) return 'path';
   if (

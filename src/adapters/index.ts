@@ -16,7 +16,7 @@ export const ADAPTERS: Record<Target, Adapter> = {
   cursor: cursorAdapter,
 };
 
-/** Signaux de détection des cibles (matrice des cibles OpenAPM, spec §8.4). */
+/** Detection signals of the targets (OpenAPM target matrix, spec §8.4). */
 const PROJECT_SIGNALS: Record<Target, string[]> = {
   claude: ['.claude', 'CLAUDE.md'],
   codex: ['.codex'],
@@ -37,7 +37,7 @@ const USER_SIGNALS: Record<Target, string[]> = {
   cursor: ['.cursor'],
 };
 
-/** Détecte les cibles présentes dans un projet (ou dans le dossier personnel). */
+/** Detects the targets present in a project (or in the home folder). */
 export function detectTargets(root: string, scope: Scope): Target[] {
   const signals = scope === 'user' ? USER_SIGNALS : PROJECT_SIGNALS;
   return (Object.keys(signals) as Target[]).filter((t) =>

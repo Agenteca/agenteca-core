@@ -9,7 +9,7 @@ import type { Target } from './manifest.js';
 import { jsonIsEffectivelyEmpty, mergeJson, mergeToml, unmergeJson, unmergeToml } from './merge.js';
 import { t } from './i18n.js';
 
-/** Opérations de déploiement produites par les adaptateurs pour un paquet. */
+/** Deployment operations produced by the adapters for one package. */
 export interface PackageOps {
   identity: string;
   name: string;
@@ -17,7 +17,7 @@ export interface PackageOps {
   merges: MergeOp[];
 }
 
-/** État précédent d'un paquet, tel qu'enregistré dans le lockfile. */
+/** Previous state of a package, as recorded in the lockfile. */
 export interface PriorPackageState {
   identity: string;
   files: Record<string, string>;
@@ -27,7 +27,7 @@ export interface PriorPackageState {
 export interface PlannedFile {
   path: string;
   action: 'create' | 'update' | 'unchanged' | 'conflict';
-  /** `modified` : fichier géré, modifié à la main ; `unmanaged` : fichier existant non géré par ahub. */
+  /** `modified`: managed file, edited by hand; `unmanaged`: existing file not managed by ahub. */
   reason?: 'modified' | 'unmanaged';
   hash: string;
   size: number;
@@ -47,7 +47,7 @@ export interface PlannedMerge {
   format: 'json' | 'toml';
   kind: 'mcp' | 'hooks';
   action: 'create' | 'update' | 'unchanged' | 'delete';
-  /** Clés ajoutées ou retirées, lisibles par un humain. */
+  /** Keys added or removed, readable by a human. */
   changes: string[];
   conflicts: string[];
 }
@@ -66,16 +66,16 @@ export interface DeployPlan {
   conflicts: PlanConflict[];
 }
 
-/** Plan accompagné des contenus à écrire (non sérialisable). */
+/** Plan with the contents to write (not serialisable). */
 export interface PreparedDeploy {
   plan: DeployPlan;
   contents: Map<string, { bytes: Buffer; executable: boolean }>;
   mergeTexts: Map<string, string | null>;
-  /** Par paquet : ce qui sera enregistré dans le lockfile une fois le plan appliqué. */
+  /** Per package: what will be recorded in the lockfile once the plan is applied. */
   records: Map<string, { files: Record<string, string>; merged: MergedFileRecord[] }>;
 }
 
-/** Vérifie qu'un chemin relatif reste dans la racine, sans traverser de lien symbolique. */
+/** Checks that a relative path stays inside the root, without going through a symbolic link. */
 export async function resolveInside(root: string, rel: string): Promise<string> {
   if (
     !rel ||
@@ -100,7 +100,7 @@ export async function resolveInside(root: string, rel: string): Promise<string> 
       }
     } catch (e) {
       if (e instanceof AhubError) throw e;
-      break; // le reste du chemin n'existe pas encore
+      break; // the rest of the path does not exist yet
     }
   }
   return path.join(root, ...segments);
@@ -121,9 +121,9 @@ function describeEntry(e: MergedEntryRecord): string {
 }
 
 /**
- * Calcule ce qui sera écrit, mis à jour ou retiré, sans toucher au disque.
- * Règle centrale : un fichier modifié à la main, ou existant sans être géré
- * par ahub, n'est jamais écrasé ni supprimé sans accord explicite.
+ * Computes what will be written, updated or removed, without touching the disk.
+ * Central rule: a file edited by hand, or present without being managed
+ * by ahub, is never overwritten or deleted without explicit agreement.
  */
 export async function prepareDeploy(
   root: string,
@@ -136,7 +136,7 @@ export async function prepareDeploy(
   const records = new Map<string, { files: Record<string, string>; merged: MergedFileRecord[] }>();
   for (const p of packages) records.set(p.identity, { files: {}, merged: [] });
 
-  // Empreinte enregistrée pour chaque fichier géré, tous paquets confondus.
+  // Hash recorded for each managed file, across all packages.
   const priorHashes = new Map<string, string>();
   for (const p of prior) for (const [f, h] of Object.entries(p.files)) priorHashes.set(f, h);
 
@@ -206,7 +206,7 @@ export async function prepareDeploy(
     }
   }
 
-  // --- Fichiers à retirer : enregistrés auparavant, absents du nouveau plan --
+  // --- Files to remove: recorded before, absent from the new plan ----------
   const seenRemoval = new Set<string>();
   for (const p of prior) {
     for (const [f, recorded] of Object.entries(p.files)) {
@@ -230,7 +230,7 @@ export async function prepareDeploy(
   }
   plan.removals.sort((a, b) => (a.path < b.path ? -1 : 1));
 
-  // --- Fichiers de configuration partagés -----------------------------------
+  // --- Shared configuration files -------------------------------------------
   const mergePaths = new Set<string>();
   for (const p of prior) for (const m of p.merged) mergePaths.add(m.path);
   for (const p of packages) for (const m of p.merges) mergePaths.add(m.path);
@@ -257,7 +257,7 @@ export async function prepareDeploy(
       conflicts: [],
     };
 
-    // 1. Retirer les anciennes entrées (elles seront reposées si elles sont toujours voulues).
+    // 1. Remove the old entries (they are put back if they are still wanted).
     const keptByIdentity = new Map<string, MergedEntryRecord[]>();
     for (const { identity, record } of priorRecords) {
       if (text === undefined) continue;
@@ -267,7 +267,7 @@ export async function prepareDeploy(
       if (res.kept.length > 0) keptByIdentity.set(identity, res.kept);
     }
 
-    // 2. Poser les nouvelles entrées, paquet par paquet.
+    // 2. Add the new entries, package by package.
     const ensured: MergedEntryRecord[] = [];
     for (const { identity, op } of newOps) {
       const res =
@@ -299,11 +299,11 @@ export async function prepareDeploy(
       }
     }
 
-    // 3. Entrées modifiées à la main et plus voulues : laissées en place, signalées.
+    // 3. Entries edited by hand and no longer wanted: left in place, reported.
     for (const [identity, kept] of keptByIdentity) {
       const stillWanted = newOps.some((n) => n.identity === identity);
       for (const k of kept) {
-        if (stillWanted) continue; // le conflit a déjà été signalé à la pose
+        if (stillWanted) continue; // the conflict was already reported when adding
         const message = t('{0}: "{1}" was edited by hand, entry left in place', [filePath, describeEntry(k)]);
         pm.conflicts.push(message);
         plan.conflicts.push({ path: filePath, reason: 'merge', message });
@@ -348,7 +348,7 @@ export async function prepareDeploy(
   return { plan, contents, mergeTexts, records };
 }
 
-/** Empreinte du plan : ce que l'utilisateur a vu est exactement ce qui sera appliqué. */
+/** Hash of the plan: what the user saw is exactly what will be applied. */
 export function planFingerprint(plan: DeployPlan, extra: unknown = null): string {
   return sha256Hex(
     stableStringify({
@@ -382,20 +382,20 @@ async function pruneEmptyDirs(root: string, startDir: string): Promise<void> {
 }
 
 export interface ApplyOptions {
-  /** Chemins en conflit que l'utilisateur accepte d'écraser ou de supprimer ; `all` pour tous. */
+  /** Conflicting paths that the user agrees to overwrite or delete; `all` for every one. */
   overwrite?: Set<string> | 'all';
 }
 
 export interface ApplyResult {
   written: string[];
   removed: string[];
-  /** Fichiers en conflit laissés intacts. */
+  /** Conflicting files left untouched. */
   skipped: string[];
 }
 
 /**
- * Applique un plan préparé. Les fichiers en conflit non couverts par
- * `overwrite` sont laissés intacts et retirés de l'enregistrement du paquet.
+ * Applies a prepared plan. Conflicting files not covered by
+ * `overwrite` are left untouched and removed from the record of the package.
  */
 export async function applyDeploy(prepared: PreparedDeploy, opts: ApplyOptions = {}): Promise<ApplyResult> {
   const { plan, contents, mergeTexts, records } = prepared;
@@ -427,7 +427,7 @@ export async function applyDeploy(prepared: PreparedDeploy, opts: ApplyOptions =
       await unlink(abs);
       result.removed.push(r.path);
     } catch {
-      // déjà absent
+      // already gone
     }
     await pruneEmptyDirs(plan.root, path.dirname(abs));
   }
@@ -441,7 +441,7 @@ export async function applyDeploy(prepared: PreparedDeploy, opts: ApplyOptions =
         await unlink(abs);
         result.removed.push(m.path);
       } catch {
-        // déjà absent
+        // already gone
       }
       await pruneEmptyDirs(plan.root, path.dirname(abs));
     } else {

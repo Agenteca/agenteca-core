@@ -12,9 +12,9 @@ import type { Adapter } from './types.js';
 
 /**
  * GitHub Copilot (VS Code, CLI). Agents `.github/agents/*.agent.md`, skills
- * `.agents/skills/` (ou `.github/skills/` avec l'option de chemins natifs),
- * prompts `.github/prompts/` (VS Code seulement), hooks `.github/hooks/*.json`,
- * MCP dans `.vscode/mcp.json` (clé `servers`) et `.github/mcp.json` (CLI, clé `mcpServers`).
+ * `.agents/skills/` (or `.github/skills/` with the native paths option),
+ * prompts `.github/prompts/` (VS Code only), hooks `.github/hooks/*.json`,
+ * MCP in `.vscode/mcp.json` (`servers` key) and `.github/mcp.json` (CLI, `mcpServers` key).
  */
 export const copilotAdapter: Adapter = (content, ctx) => {
   const r = emptyResult();
@@ -23,7 +23,7 @@ export const copilotAdapter: Adapter = (content, ctx) => {
   const skillsDir = ctx.legacySkillPaths ? (user ? '.copilot/skills' : '.github/skills') : '.agents/skills';
   r.files.push(...skillFiles(selectedSkills(content, ctx), skillsDir, 'copilot'));
 
-  // Le format `.agent.md` est natif : le fichier source est copié tel quel.
+  // The `.agent.md` format is native: the source file is copied as is.
   for (const a of content.agents) {
     r.files.push({
       path: `${root}/agents/${a.name}.agent.md`,
@@ -73,7 +73,7 @@ export const copilotAdapter: Adapter = (content, ctx) => {
   r.diagnostics.push(...mcp.diagnostics);
   r.executables.push(...mcp.executables);
   if (mcp.servers.length > 0) {
-    // Copilot CLI (et agent cloud) : clé `mcpServers`, type `local` pour stdio.
+    // Copilot CLI (and cloud agent): `mcpServers` key, `local` type for stdio.
     r.merges.push({
       path: user ? '.copilot/mcp-config.json' : '.github/mcp.json',
       format: 'json',
@@ -90,7 +90,7 @@ export const copilotAdapter: Adapter = (content, ctx) => {
         return { type: 'key' as const, keyPath: ['mcpServers', m.name], value };
       }),
     });
-    // VS Code : `.vscode/mcp.json`, clé `servers`. Pas d'équivalent fichier en portée utilisateur.
+    // VS Code: `.vscode/mcp.json`, `servers` key. No file equivalent in user scope.
     if (!user) {
       r.merges.push({
         path: '.vscode/mcp.json',

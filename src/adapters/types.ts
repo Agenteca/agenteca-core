@@ -5,7 +5,7 @@ import type { PackageContent } from '../package.js';
 
 export type Scope = 'project' | 'user';
 
-/** Fichier entier écrit par un adaptateur. Chemin POSIX relatif à la racine de la portée. */
+/** Whole file written by an adapter. POSIX path relative to the root of the scope. */
 export interface FileOp {
   path: string;
   bytes: Buffer;
@@ -14,7 +14,7 @@ export interface FileOp {
   target: Target;
 }
 
-/** Entrées à fusionner dans un fichier de configuration partagé. */
+/** Entries to merge into a shared configuration file. */
 export interface MergeOp {
   path: string;
   format: 'json' | 'toml';
@@ -23,12 +23,12 @@ export interface MergeOp {
   entries: MergedEntryRecord[];
 }
 
-/** Élément exécutable porté à l'attention de l'utilisateur avant confirmation. */
+/** Executable item brought to the user's attention before confirmation. */
 export interface ExecutableNotice {
   kind: 'hook' | 'mcp';
   target: Target;
   name: string;
-  /** Événement de hook, ou transport MCP. */
+  /** Hook event, or MCP transport. */
   detail: string;
   command: string;
 }
@@ -42,11 +42,11 @@ export interface AdapterResult {
 
 export interface AdapterContext {
   scope: Scope;
-  /** Identifiant court et sûr du paquet, utilisé dans les noms de fichiers générés. */
+  /** Short, safe identifier of the package, used in the names of generated files. */
   packageSlug: string;
-  /** Écrit les skills dans les dossiers natifs (`.github/skills`, `.cursor/skills`) plutôt que `.agents/skills`. */
+  /** Writes skills to the native folders (`.github/skills`, `.cursor/skills`) rather than `.agents/skills`. */
   legacySkillPaths?: boolean;
-  /** Sous-ensemble de skills demandé (`skills:` de la dépendance). */
+  /** Requested subset of skills (`skills:` of the dependency). */
   skillSubset?: string[];
 }
 

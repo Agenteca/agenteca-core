@@ -19,16 +19,16 @@ export interface MergeConflict {
 }
 
 export interface MergeResult {
-  /** Nouveau contenu du fichier. */
+  /** New content of the file. */
   text: string;
-  /** Entrées dont le paquet est désormais propriétaire. */
+  /** Entries now owned by the package. */
   owned: MergedEntryRecord[];
   conflicts: MergeConflict[];
 }
 
 export interface RemoveResult {
   text: string;
-  /** Entrées laissées en place parce qu'elles ont été modifiées à la main. */
+  /** Entries left in place because they were edited by hand. */
   kept: MergedEntryRecord[];
 }
 
@@ -64,10 +64,10 @@ function unreadable(): MergeConflict {
 }
 
 /**
- * Fusionne des entrées dans un document JSON (ou JSONC) par éditions ciblées :
- * contenu et commentaires existants sont conservés (seule l'indentation voisine
- * de l'édition peut être normalisée). Une clé déjà présente avec une autre
- * valeur n'est jamais écrasée.
+ * Merges entries into a JSON (or JSONC) document through targeted edits:
+ * existing content and comments are kept (only the indentation next to
+ * the edit may be normalised). A key already present with another
+ * value is never overwritten.
  */
 export function mergeJson(existing: string | undefined, entries: MergedEntryRecord[]): MergeResult {
   let text = existing ?? '';
@@ -85,7 +85,7 @@ export function mergeJson(existing: string | undefined, entries: MergedEntryReco
         text = edit(text, entry.keyPath, entry.value);
         owned.push(entry);
       } else if (deepEqual(current, entry.value)) {
-        owned.push(entry); // valeur identique déjà présente : adoptée
+        owned.push(entry); // identical value already present: adopted
       } else {
         conflicts.push({
           keyPath: entry.keyPath,
@@ -116,7 +116,7 @@ export function mergeJson(existing: string | undefined, entries: MergedEntryReco
   return { text, owned, conflicts };
 }
 
-/** Retire d'un document JSON les entrées possédées, si elles n'ont pas été modifiées. */
+/** Removes the owned entries from a JSON document, if they were not edited. */
 export function unmergeJson(existing: string, ownedEntries: MergedEntryRecord[]): RemoveResult {
   let text = existing;
   const kept: MergedEntryRecord[] = [];
@@ -132,9 +132,9 @@ export function unmergeJson(existing: string, ownedEntries: MergedEntryRecord[])
     } else if (entry.type === 'append' && Array.isArray(current)) {
       const index = current.findIndex((item) => deepEqual(item, entry.value));
       if (index >= 0) text = edit(text, [...entry.keyPath, index], undefined);
-      // élément absent : déjà retiré à la main, rien à faire
+      // item absent: already removed by hand, nothing to do
     }
-    // Élagage : conteneurs devenus vides le long du chemin touché.
+    // Pruning: containers that became empty along the touched path.
     for (let depth = entry.keyPath.length - (entry.type === 'key' ? 1 : 0); depth >= 1; depth--) {
       const parentPath = entry.keyPath.slice(0, depth);
       const parent = getIn(parseJson(text).value, parentPath);
@@ -151,7 +151,7 @@ export function unmergeJson(existing: string, ownedEntries: MergedEntryRecord[])
   return { text, kept };
 }
 
-/** Vrai si le document ne contient plus que des clés « ensure » (ou rien). */
+/** True if the document only contains "ensure" keys (or nothing). */
 export function jsonIsEffectivelyEmpty(text: string, ensured: MergedEntryRecord[]): boolean {
   const parsed = parseJson(text);
   if (!parsed.ok) return false;
@@ -163,7 +163,7 @@ export function jsonIsEffectivelyEmpty(text: string, ensured: MergedEntryRecord[
 }
 
 // ---------------------------------------------------------------------------
-// TOML : les entrées vivent dans un bloc délimité, le reste du fichier n'est jamais réécrit.
+// TOML: entries live in a delimited block, the rest of the file is never rewritten.
 
 function markers(blockId: string): { start: string; end: string } {
   return {
@@ -213,7 +213,7 @@ function joinToml(before: string, block: string | undefined, after: string, bloc
   return parts.length > 0 ? parts.join('\n\n') + '\n' : '';
 }
 
-/** Écrit (ou remplace) le bloc TOML d'un paquet. */
+/** Writes (or replaces) the TOML block of a package. */
 export function mergeToml(
   existing: string | undefined,
   blockId: string,
@@ -264,12 +264,12 @@ export function mergeToml(
         message: t('"{0}" already exists with a different value', [entry.keyPath.join('.')]),
       });
     }
-    // valeur identique hors bloc : déjà configurée par l'utilisateur, rien à écrire ni à posséder
+    // identical value outside the block: already configured by the user, nothing to write or to own
   }
   return { text: joinToml(before, renderTomlEntries(owned), after, blockId), owned, conflicts };
 }
 
-/** Retire le bloc TOML d'un paquet, sauf s'il a été modifié à la main. */
+/** Removes the TOML block of a package, unless it was edited by hand. */
 export function unmergeToml(
   existing: string,
   blockId: string,

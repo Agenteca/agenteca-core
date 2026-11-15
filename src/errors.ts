@@ -1,4 +1,4 @@
-/** Codes d'erreur stables, repris tels quels dans le contrat `ahub --json`. */
+/** Stable error codes, carried as is into the `ahub --json` contract. */
 export type ErrorCode =
   | 'USAGE'
   | 'MANIFEST_INVALID'
@@ -30,7 +30,7 @@ export class AhubError extends Error {
   }
 }
 
-/** Message non bloquant : toujours affiché, jamais avalé en silence. */
+/** Non-blocking message: always shown, never silently swallowed. */
 export interface Diagnostic {
   code: string;
   message: string;

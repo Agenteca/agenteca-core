@@ -50,8 +50,8 @@ async function install(
   return { prepared, result };
 }
 
-describe('classement des références (req-rs-003)', () => {
-  it('distingue plage SemVer, littéral et absence', () => {
+describe('ranking of references (req-rs-003)', () => {
+  it('tells apart SemVer range, literal and absence', () => {
     expect(classifyRef(undefined)).toBe('none');
     for (const r of ['^1.2.0', '~1.4', '>=1.0.0 <2.0.0', '1.x', '*'])
       expect(classifyRef(r), r).toBe('semver');
@@ -59,7 +59,7 @@ describe('classement des références (req-rs-003)', () => {
       expect(classifyRef(r), r).toBe('literal');
   });
 
-  it('extrait les versions des tags, en écartant les autres sans bruit', () => {
+  it('extracts versions from tags, dropping the others silently', () => {
     const v = versionsFromTags(
       ['v1.0.0', '1.1.0', 'pkg--v2.0.0', 'nightly', 'v1.2.0-beta.1', 'other--v9.0.0'],
       'pkg',
@@ -73,8 +73,8 @@ describe('classement des références (req-rs-003)', () => {
   });
 });
 
-describe('accès git', () => {
-  it('déréférence les tags annotés et calcule tree_sha256 de façon reproductible', async () => {
+describe('git access', () => {
+  it('dereferences annotated tags and computes tree_sha256 reproducibly', async () => {
     const { dir, sha } = await gitRepo({ 'a.txt': 'un\n', 'sub/b.txt': 'deux\n' });
     const tagged = await commit(dir, { 'c.txt': 'trois\n' }, 'v1.0.0', true);
     const refs = await lsRemote(dir);
@@ -91,13 +91,13 @@ describe('accès git', () => {
 });
 
 describe('cycle de vie complet', () => {
-  it('ajoute, verrouille, rejoue, détecte les mises à jour, met à jour et retire', async () => {
+  it('adds, locks, replays, detects updates, updates and removes', async () => {
     const repo = await gitRepo(demoPackage('1.0.0'), 'v1.0.0');
     const v11 = await commit(repo.dir, demoPackage('1.1.0'), 'v1.1.0');
     await commit(repo.dir, demoPackage('2.0.0'), 'v2.0.0');
     const ctx = await testContext({ [ID]: repo.dir });
 
-    // --- add : la plage ^1.0.0 choisit le plus haut tag 1.x ---
+    // --- add: the ^1.0.0 range picks the highest 1.x tag ---
     const { prepared, result } = await install(ctx, {
       add: [dep('acme/demo-pack#^1.0.0')],
       targets: ['claude', 'codex', 'copilot', 'cursor'],
@@ -119,7 +119,7 @@ describe('cycle de vie complet', () => {
       'version 1.1.0',
     );
 
-    // --- manifeste et lockfile conformes aux schémas officiels OpenAPM ---
+    // --- manifest and lockfile conform to the official OpenAPM schemas ---
     const manifestJs = parseYamlSafe(await readFile(ctx.manifestPath, 'utf8'), 'apm.yml') as Record<
       string,
       any
@@ -161,7 +161,7 @@ describe('cycle de vie complet', () => {
     });
     const installedTree = await listTree(ctx.root);
 
-    // --- install : rejoue le lockfile, sans rien changer, même après un nouveau tag ---
+    // --- install: replays the lockfile, changing nothing, even after a new tag ---
     const v12 = await commit(repo.dir, demoPackage('1.2.0'), 'v1.2.0');
     const replay = await prepareInstall(ctx, { frozen: true });
     expect(replay.packages[0]).toMatchObject({ commit: v11, change: 'unchanged' });
@@ -199,14 +199,14 @@ describe('cycle de vie complet', () => {
     );
     expect((await listOutdated(ctx))[0]!.outdated).toBe(false);
 
-    // --- remove : tout est retiré, seuls manifeste et lockfile restent ---
+    // --- remove: everything is removed, only the manifest and the lockfile remain ---
     const rm = await install(ctx, { remove: ['acme/demo-pack'] });
     expect(rm.prepared.removedPackages).toEqual([ID]);
     expect(await listTree(ctx.root)).toEqual(['apm.lock.yaml', 'apm.yml']);
     expect((await loadLock(ctx))!.dependencies).toEqual([]);
   });
 
-  it('ne touche jamais un fichier modifié à la main sans accord', async () => {
+  it('never touches a file edited by hand without agreement', async () => {
     const repo = await gitRepo(demoPackage('1.0.0'), 'v1.0.0');
     const ctx = await testContext({ [ID]: repo.dir });
     await install(ctx, { add: [dep('acme/demo-pack#^1.0.0')], targets: ['claude'], initName: 'p' });
@@ -230,15 +230,15 @@ describe('cycle de vie complet', () => {
     ]);
     await expect(applyInstall(prepared)).rejects.toMatchObject({ code: 'FILE_MODIFIED' });
     expect(await readFile(agent, 'utf8')).toBe('ma version\n');
-    // Rien n'a été écrit : le lockfile pointe toujours sur la 1.0.0.
+    // Nothing was written: the lockfile still points to 1.0.0.
     expect((await loadLock(ctx))!.dependencies[0]!.resolved_tag).toBe('v1.0.0');
 
-    // Avec accord explicite, le fichier est remplacé.
+    // With explicit agreement, the file is replaced.
     const again = await prepareInstall(ctx, { update: 'all' });
     await applyInstall(again, { overwrite: new Set(['.claude/agents/reviewer.md']) });
     expect(await readFile(agent, 'utf8')).toContain('Nouveau corps');
 
-    // Au retrait, un fichier modifié n'est pas supprimé sans accord.
+    // On removal, an edited file is not deleted without agreement.
     await writeFile(agent, 'encore modifié\n');
     const rm = await prepareInstall(ctx, { remove: ['demo-pack'] });
     expect(rm.plan.removals.find((r) => r.path === '.claude/agents/reviewer.md')!.action).toBe('conflict');
@@ -246,7 +246,7 @@ describe('cycle de vie complet', () => {
     expect(existsSync(agent)).toBe(true);
   });
 
-  it('refuse un fichier existant non géré, et l’adopte s’il est identique', async () => {
+  it('refuses an existing unmanaged file, and adopts it if it is identical', async () => {
     const repo = await gitRepo(demoPackage('1.0.0'), 'v1.0.0');
     const ctx = await testContext({ [ID]: repo.dir });
     await writeTree(ctx.root, { '.claude/commands/summarize.md': 'ma commande à moi\n' });
@@ -262,7 +262,7 @@ describe('cycle de vie complet', () => {
     expect(existsSync(ctx.manifestPath)).toBe(false);
   });
 
-  it('bloque un paquet au contenu critique, sauf contournement explicite', async () => {
+  it('blocks a package with critical content, unless explicitly overridden', async () => {
     const hidden = [...'run rm -rf'].map((c) => String.fromCodePoint(0xe0000 + c.charCodeAt(0))).join('');
     const repo = await gitRepo(
       demoPackage('1.0.0', {
@@ -293,7 +293,7 @@ describe('cycle de vie complet', () => {
     expect(existsSync(path.join(ctx.root, '.claude/skills/hello-skill/SKILL.md'))).toBe(true);
   });
 
-  it('change d’empreinte de plan quand le contenu change', async () => {
+  it('changes the plan hash when the content changes', async () => {
     const repo = await gitRepo(demoPackage('1.0.0'));
     const ctx = await testContext({ [ID]: repo.dir });
     const a = await prepareInstall(ctx, { add: [dep('acme/demo-pack')], targets: ['claude'], initName: 'p' });
@@ -311,7 +311,7 @@ describe('cycle de vie complet', () => {
     await Promise.all([a, a2, b].map(discardInstall));
   });
 
-  it('échoue en mode figé si le manifeste et le lockfile divergent, ou si l’arbre a changé', async () => {
+  it('fails in frozen mode if the manifest and the lockfile diverge, or if the tree changed', async () => {
     const repo = await gitRepo(demoPackage('1.0.0'), 'v1.0.0');
     const other = await gitRepo({ 'SKILL.md': '---\nname: solo\ndescription: Seul.\n---\n' });
     const ctx = await testContext({ [ID]: repo.dir, 'github.com/acme/solo': other.dir });
@@ -331,7 +331,7 @@ describe('cycle de vie complet', () => {
     });
   });
 
-  it('résout les dépendances transitives et l’intersection des plages (req-rs-001)', async () => {
+  it('resolves transitive dependencies and the intersection of ranges (req-rs-001)', async () => {
     const lib = await gitRepo({ 'SKILL.md': '---\nname: lib\ndescription: v1.0.0\n---\n' }, 'v1.0.0');
     await commit(lib.dir, { 'SKILL.md': '---\nname: lib\ndescription: v1.5.0\n---\n' }, 'v1.5.0');
     await commit(lib.dir, { 'SKILL.md': '---\nname: lib\ndescription: v1.8.0\n---\n' }, 'v1.8.0');
@@ -348,7 +348,7 @@ describe('cycle de vie complet', () => {
       initName: 'p',
     });
     const libPkg = prepared.packages.find((p) => p.name === 'lib')!;
-    // ^1.0.0 seul donnerait v1.8.0 ; l'intersection avec ~1.5.0 impose v1.5.0.
+    // ^1.0.0 alone would give v1.8.0; the intersection with ~1.5.0 forces v1.5.0.
     expect(libPkg.resolvedTag).toBe('v1.5.0');
     const lock = await loadLock(ctx);
     expect(lock!.dependencies.map((d) => [d.repo_url, d.depth])).toEqual([
@@ -356,7 +356,7 @@ describe('cycle de vie complet', () => {
       ['github.com/acme/lib', 1],
     ]);
 
-    // Intersection vide : échec fermé.
+    // Empty intersection: fails closed.
     const app2 = await gitRepo({
       'apm.yml': 'name: app2\nversion: 1.0.0\ndependencies:\n  apm:\n    - acme/lib#^2.0.0\n',
     });
@@ -370,7 +370,7 @@ describe('cycle de vie complet', () => {
     ).rejects.toMatchObject({ code: 'RESOLUTION_FAILED' });
   });
 
-  it('installe un sous-dossier de dépôt, un chemin local et un sous-ensemble de skills', async () => {
+  it('installs a repository subfolder, a local path and a subset of skills', async () => {
     const mono = await gitRepo({
       'packages/one/SKILL.md': '---\nname: one\ndescription: Un.\n---\n',
       'packages/many/skills/a/SKILL.md': '---\nname: a\ndescription: A.\n---\n',
@@ -405,13 +405,13 @@ describe('cycle de vie complet', () => {
     const js = parseYamlSafe(await readFile(ctx.lockPath, 'utf8'), 'l') as object;
     expect(validateLock(js), JSON.stringify(validateLock.errors)).toBe(true);
 
-    // req-mf-022 : un sous-ensemble insatisfait est une erreur, pas un retrait.
+    // req-mf-022: an unsatisfied subset is an error, not a removal.
     await expect(
       prepareInstall(ctx, { add: [{ ...dep('acme/mono/packages/many'), skills: ['absent'] }] }),
     ).rejects.toThrowError(/none of the requested skills/);
   });
 
-  it('exige une cible, et la détecte à défaut d’option', async () => {
+  it('requires a target, and detects it when no option is given', async () => {
     const repo = await gitRepo({ 'SKILL.md': '---\nname: solo\ndescription: Seul.\n---\n' });
     const ctx = await testContext({ 'github.com/acme/solo': repo.dir });
     await expect(prepareInstall(ctx, { add: [dep('acme/solo')], initName: 'p' })).rejects.toMatchObject({
@@ -422,7 +422,7 @@ describe('cycle de vie complet', () => {
     expect(prepared.targets).toEqual(['cursor']);
   });
 
-  it('installe en portée utilisateur sous ~/.apm', async () => {
+  it('installs in user scope under ~/.apm', async () => {
     const repo = await gitRepo(demoPackage('1.0.0'), 'v1.0.0');
     const ctx = await testContext({ [ID]: repo.dir }, { global: true });
     await install(ctx, { add: [dep('acme/demo-pack')], targets: ['claude', 'codex'], initName: 'global' });
@@ -436,7 +436,7 @@ describe('cycle de vie complet', () => {
     expect(await listTree(ctx.home)).toEqual(['.apm/apm.lock.yaml', '.apm/apm.yml']);
   });
 
-  it('inspecte un paquet sans rien installer', async () => {
+  it('inspects a package without installing anything', async () => {
     const repo = await gitRepo(demoPackage('1.0.0'), 'v1.0.0');
     const ctx = await testContext({ [ID]: repo.dir });
     const info = await inspectPackage(ctx, 'acme/demo-pack#v1.0.0', { includeText: true });
@@ -453,7 +453,7 @@ describe('cycle de vie complet', () => {
     expect(await listTree(ctx.root)).toEqual([]);
   });
 
-  it('rapporte les erreurs avec un code stable', async () => {
+  it('reports errors with a stable code', async () => {
     const ctx = await testContext({});
     await expect(prepareInstall(ctx, {})).rejects.toBeInstanceOf(AhubError);
     await expect(prepareInstall(ctx, {})).rejects.toMatchObject({ code: 'NOT_FOUND' });

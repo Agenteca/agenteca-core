@@ -9,18 +9,18 @@ import { canonicalTreeHash, sha256Hex, type TreeEntry } from './hash.js';
 import { t } from './i18n.js';
 
 export interface GitOptions {
-  /** Dossier des miroirs git locaux. */
+  /** Folder of the local git mirrors. */
   cacheDir: string;
   /**
-   * Remplacements d'URL : identité `hôte/propriétaire/dépôt` → URL ou chemin réel.
-   * Sert aux tests (dépôts locaux) et aux miroirs d'entreprise.
+   * URL replacements: identity `host/owner/repo` → real URL or path.
+   * Used by the tests (local repositories) and by company mirrors.
    */
   mirrors?: Record<string, string>;
 }
 
 /**
- * Configuration imposée à chaque appel git : aucune invite, aucun hook,
- * aucun lien symbolique matérialisé, aucun protocole exotique.
+ * Configuration forced on every git call: no prompt, no hook,
+ * no materialised symbolic link, no exotic protocol.
  */
 const SAFE_CONFIG = [
   '-c',
@@ -52,7 +52,7 @@ function gitEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
   };
 }
 
-/** N'expose jamais d'identifiants présents dans une URL. */
+/** Never exposes credentials present in a URL. */
 function redact(text: string): string {
   return text.replace(/(https?:\/\/)[^/@\s]+@/g, '$1***@');
 }
@@ -89,15 +89,15 @@ export function defaultCacheDir(env: NodeJS.ProcessEnv = process.env): string {
 }
 
 export interface RemoteRefs {
-  /** Commit pointé par HEAD. */
+  /** Commit HEAD points to. */
   head?: string;
   defaultBranch?: string;
-  /** Nom de tag → commit (tags annotés déjà déréférencés, req-rs-002). */
+  /** Tag name → commit (annotated tags already dereferenced, req-rs-002). */
   tags: Map<string, string>;
   branches: Map<string, string>;
 }
 
-/** Liste les références distantes sans rien cloner. */
+/** Lists the remote references without cloning anything. */
 export async function lsRemote(url: string): Promise<RemoteRefs> {
   const out = await git(['ls-remote', '--symref', '--', url]);
   const refs: RemoteRefs = { tags: new Map(), branches: new Map() };
@@ -122,7 +122,7 @@ export async function lsRemote(url: string): Promise<RemoteRefs> {
   return refs;
 }
 
-/** Crée ou met à jour le miroir local d'un dépôt ; retourne son dossier git. */
+/** Creates or updates the local mirror of a repository; returns its git folder. */
 export async function ensureMirror(url: string, opts: GitOptions, refresh = true): Promise<string> {
   const dir = path.join(opts.cacheDir, 'git', createHash('sha256').update(url).digest('hex').slice(0, 32));
   if (existsSync(path.join(dir, 'HEAD'))) {
@@ -153,7 +153,7 @@ export async function hasCommit(gitDir: string, commit: string): Promise<boolean
   }
 }
 
-/** Résout une référence (branche, tag, SHA) en commit de 40 caractères dans le miroir. */
+/** Resolves a reference (branch, tag, SHA) to a 40-character commit in the mirror. */
 export async function revParse(gitDir: string, ref: string): Promise<string | undefined> {
   for (const candidate of [`refs/tags/${ref}`, `refs/heads/${ref}`, ref]) {
     try {
@@ -169,8 +169,8 @@ export async function revParse(gitDir: string, ref: string): Promise<string | un
 }
 
 /**
- * Extrait l'arbre d'un commit dans `destDir`. Aucun hook n'est exécuté et les
- * liens symboliques sont écrits comme de simples fichiers texte.
+ * Extracts the tree of a commit into `destDir`. No hook is run and
+ * symbolic links are written as plain text files.
  */
 export async function materialize(gitDir: string, commit: string, destDir: string): Promise<void> {
   await mkdir(destDir, { recursive: true });
@@ -180,7 +180,7 @@ export async function materialize(gitDir: string, commit: string, destDir: strin
       env: { GIT_INDEX_FILE: path.join(indexDir, 'index') },
     });
   } catch (e) {
-    // Un commit sans aucun fichier fait échouer « checkout -- . » : arbre vide, rien à extraire.
+    // A commit without any file makes "checkout -- ." fail: empty tree, nothing to extract.
     const empty = (await git(['--git-dir', gitDir, 'ls-tree', '--name-only', commit])).trim() === '';
     if (!empty) throw e;
   } finally {
@@ -188,7 +188,7 @@ export async function materialize(gitDir: string, commit: string, destDir: strin
   }
 }
 
-/** Lit un lot de blobs avec un seul processus `git cat-file --batch`. */
+/** Reads a batch of blobs with a single `git cat-file --batch` process. */
 function readBlobs(gitDir: string, oids: string[]): Promise<Map<string, Buffer>> {
   return new Promise((resolve, reject) => {
     const result = new Map<string, Buffer>();
@@ -228,8 +228,8 @@ interface RawTreeNode {
 }
 
 /**
- * Calcule `tree_sha256` (spec §5.6.4, req-lk-015) pour l'arbre complet d'un commit.
- * Les sous-modules (mode 160000, hors spec) sont hachés sur l'identifiant de leur commit.
+ * Computes `tree_sha256` (spec §5.6.4, req-lk-015) for the full tree of a commit.
+ * Submodules (mode 160000, outside the spec) are hashed on the identifier of their commit.
  */
 export async function treeSha256(gitDir: string, commit: string): Promise<string> {
   const out = await git(['--git-dir', gitDir, 'ls-tree', '-r', '-t', '-z', '--full-tree', commit]);

@@ -9,8 +9,8 @@ import {
   parseDepString,
 } from '../src/index.js';
 
-describe('références de dépendance (spec §4.3)', () => {
-  it('analyse la forme raccourcie', () => {
+describe('dependency references (spec §4.3)', () => {
+  it('parses the shorthand form', () => {
     const r = parseDepString('acme/tools#v1.2.0');
     expect(r).toMatchObject({
       kind: 'git',
@@ -23,7 +23,7 @@ describe('références de dépendance (spec §4.3)', () => {
     expect(cloneUrl(r)).toBe('https://github.com/acme/tools.git');
   });
 
-  it('reconnaît un hôte explicite et un sous-chemin virtuel', () => {
+  it('recognises an explicit host and a virtual subpath', () => {
     const r = parseDepString('gitlab.com/acme/std/instructions/security#main');
     expect(r).toMatchObject({
       host: 'gitlab.com',
@@ -35,7 +35,7 @@ describe('références de dépendance (spec §4.3)', () => {
     expect(depIdentity(r)).toBe('gitlab.com/acme/std/instructions/security');
   });
 
-  it('analyse les URL https, ssh et scp', () => {
+  it('parses https, ssh and scp URLs', () => {
     expect(parseDepString('https://git.example.com:8443/o/r.git#v1')).toMatchObject({
       form: 'https',
       host: 'git.example.com',
@@ -49,25 +49,25 @@ describe('références de dépendance (spec §4.3)', () => {
     expect(cloneUrl(parseDepString('git@github.com:o/r.git'))).toBe('git@github.com:o/r.git');
   });
 
-  it('reconnaît les chemins locaux', () => {
+  it('recognises local paths', () => {
     expect(parseDepString('./packages/x')).toEqual({ kind: 'local', localPath: './packages/x' });
     expect(parseDepString('..\\sibling').localPath).toBe('../sibling');
   });
 
-  it('rejette les chaînes hors grammaire', () => {
+  it('rejects strings outside the grammar', () => {
     for (const bad of ['', 'justone', 'a//b', 'a/b/../c', 'ftp://h/o/r', 'a/b#']) {
       expect(() => parseDepString(bad), bad).toThrowError(/invalid dependency/);
     }
   });
 
-  it('normalise en forme canonique en ne retirant que l’hôte par défaut (req-mf-009)', () => {
+  it('normalises to canonical form, removing only the default host (req-mf-009)', () => {
     expect(canonicalDepString(parseDepString('https://github.com/acme/tools.git#v1'))).toBe('acme/tools#v1');
     expect(canonicalDepString(parseDepString('git@github.com:acme/tools.git'))).toBe('acme/tools');
     expect(canonicalDepString(parseDepString('gitlab.com/acme/tools'))).toBe('gitlab.com/acme/tools');
     expect(canonicalDepString(parseDepString('gitlab.com/acme/tools'), 'gitlab.com')).toBe('acme/tools');
   });
 
-  it('analyse la forme objet et refuse git + id (req-mf-011)', () => {
+  it('parses the object form and refuses git + id (req-mf-011)', () => {
     const r = parseDepEntry({
       git: 'acme/mono',
       path: 'packages/a',
@@ -80,12 +80,12 @@ describe('références de dépendance (spec §4.3)', () => {
     expect(() => parseDepEntry({ git: 'a/b', alias: '..' })).toThrowError(/invalid alias/);
   });
 
-  it('classe les fichiers virtuels par extension seulement (req-mf-008)', () => {
+  it('classifies virtual files by extension only (req-mf-008)', () => {
     expect(isVirtualFile('agents/x.agent.md')).toBe(true);
     expect(isVirtualFile('prompts/x.md')).toBe(false);
   });
 
-  it('interprète les arguments de la CLI (écart de confort @tag)', () => {
+  it('interprets the CLI arguments (@tag convenience deviation)', () => {
     expect(parseCliPackageArg('acme/tools@v1.2.0')).toEqual({ type: 'dep', dep: 'acme/tools#v1.2.0' });
     expect(parseCliPackageArg('acme/tools#v1')).toEqual({ type: 'dep', dep: 'acme/tools#v1' });
     expect(parseCliPackageArg('git@github.com:acme/tools.git')).toEqual({

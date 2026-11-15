@@ -2,12 +2,12 @@ import { cloneUrl, type DepRef, parseDepString } from './depref.js';
 import type { Diagnostic } from './errors.js';
 import { t } from './i18n.js';
 
-/** Entrée de catalogue normalisée, indépendante du format de marketplace. */
+/** Normalised catalog entry, independent of the marketplace format. */
 export interface CatalogEntry {
   name: string;
   description?: string;
   version?: string;
-  /** Référence installable par `ahub add` (forme OpenAPM). */
+  /** Reference installable with `ahub add` (OpenAPM form). */
   source: string;
   license?: string;
   author?: string;
@@ -16,7 +16,7 @@ export interface CatalogEntry {
   tags?: string[];
   /** Outils compatibles (claude, codex, copilot, cursor). */
   tools?: string[];
-  /** Le dépôt a aussi la disposition d'un plugin natif (installable par les outils eux-mêmes). */
+  /** The repository also has the layout of a native plugin (installable by the tools themselves). */
   nativePlugin?: boolean;
 }
 
@@ -29,7 +29,7 @@ export interface Catalog {
 
 export type MarketplaceFormat = 'claude' | 'codex' | 'copilot' | 'cursor';
 
-/** Emplacement du fichier de marketplace pour chaque outil. */
+/** Location of the marketplace file for each tool. */
 export const MARKETPLACE_PATHS: Record<MarketplaceFormat, string> = {
   claude: '.claude-plugin/marketplace.json',
   codex: '.agents/plugins/marketplace.json',
@@ -37,7 +37,7 @@ export const MARKETPLACE_PATHS: Record<MarketplaceFormat, string> = {
   cursor: '.cursor-plugin/marketplace.json',
 };
 
-/** Ordre de recherche d'un marketplace dans un dépôt (celui d'APM, étendu aux formats Codex et Cursor). */
+/** Search order of a marketplace in a repository (APM's, extended to the Codex and Cursor formats). */
 export const MARKETPLACE_SEARCH_ORDER = [
   'marketplace.json',
   '.github/plugin/marketplace.json',
@@ -47,10 +47,10 @@ export const MARKETPLACE_SEARCH_ORDER = [
 ];
 
 export interface MarketplaceContext {
-  /** Référence du dépôt qui publie le marketplace (`propriétaire/dépôt`), pour les sources relatives. */
+  /** Reference of the repository that publishes the marketplace (`owner/repo`), for relative sources. */
   baseRepo?: string;
   baseRef?: string;
-  /** Dossier local du marketplace, pour les sources relatives d'un registre de type chemin. */
+  /** Local folder of the marketplace, for the relative sources of a path registry. */
   baseDir?: string;
 }
 
@@ -62,7 +62,7 @@ function withRef(base: string, ref: string | undefined): string {
   return ref ? `${base}#${ref}` : base;
 }
 
-/** Convertit la « source » d'une entrée de marketplace en référence OpenAPM. */
+/** Converts the "source" of a marketplace entry into an OpenAPM reference. */
 export function sourceToDep(
   source: unknown,
   pluginRoot: string | undefined,
@@ -101,9 +101,9 @@ export function sourceToDep(
 }
 
 /**
- * Lit un marketplace.json aux formats Claude Code, Copilot CLI, Codex ou Cursor.
- * Les entrées dont la source n'est pas exprimable (npm, archive, commande) sont
- * écartées avec un diagnostic.
+ * Reads a marketplace.json in the Claude Code, Copilot CLI, Codex or Cursor format.
+ * Entries whose source cannot be expressed (npm, archive, command) are
+ * dropped with a diagnostic.
  */
 export function parseMarketplace(
   json: unknown,
@@ -172,9 +172,9 @@ export interface ExportResult {
 }
 
 /**
- * Exporte un catalogue au format de marketplace natif d'un outil. Par défaut,
- * seules les entrées dont le dépôt est aussi un plugin natif sont exportées :
- * les outils ne savent installer que cette disposition.
+ * Exports a catalog in the native marketplace format of a tool. By default,
+ * only the entries whose repository is also a native plugin are exported:
+ * the tools can only install that layout.
  */
 export function exportMarketplace(
   catalog: Catalog,
@@ -194,7 +194,7 @@ export function exportMarketplace(
       });
       continue;
     }
-    // Un plugin natif ne vaut que pour son outil : il n'apparaît pas dans le marketplace des autres.
+    // A native plugin is only worth something for its own tool: it does not appear in the marketplace of the others.
     if (e.nativePlugin === true && e.tools && e.tools.length > 0 && !e.tools.includes(format)) continue;
     let ref: DepRef;
     try {
@@ -211,7 +211,7 @@ export function exportMarketplace(
     if (e.version) common.version = e.version;
 
     if (format === 'codex') {
-      // Schéma Codex : pas d'`owner`, une `policy` par entrée. Champs de la source `url` non confirmés par la doc.
+      // Codex schema: no `owner`, one `policy` per entry. Fields of the `url` source not confirmed by the documentation.
       const src =
         ref.kind === 'local'
           ? { source: 'local', path: ref.localPath }
@@ -269,7 +269,7 @@ export function exportMarketplace(
   return { path: MARKETPLACE_PATHS[format], json, diagnostics };
 }
 
-/** Lit le bloc `marketplace:` d'un `apm.yml` (spec §4.7) comme catalogue. */
+/** Reads the `marketplace:` block of an `apm.yml` (spec §4.7) as a catalog. */
 export function catalogFromManifestBlock(block: unknown, fallbackName: string): Catalog {
   const b = (block ?? {}) as Record<string, unknown>;
   const catalog: Catalog = { name: str(b.name) ?? fallbackName, entries: [] };

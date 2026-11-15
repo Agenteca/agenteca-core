@@ -12,7 +12,7 @@ export function text(s: string): Buffer {
   return Buffer.from(s, 'utf8');
 }
 
-/** Skills retenus, en appliquant le sous-ensemble `skills:` éventuel. */
+/** Skills kept, applying the `skills:` subset if any. */
 export function selectedSkills(content: PackageContent, ctx: AdapterContext): SkillPrimitive[] {
   if (!ctx.skillSubset || ctx.skillSubset.length === 0) return content.skills;
   return content.skills.filter((s) => ctx.skillSubset!.includes(s.name));
@@ -47,8 +47,8 @@ export function toolList(value: unknown): string[] | undefined {
 }
 
 /**
- * Diagnostic exigé par req-tg-006 quand une restriction de capacité déclarée
- * par l'agent source ne peut pas être reproduite à l'identique.
+ * Diagnostic required by req-tg-006 when a capability restriction declared
+ * by the source agent cannot be reproduced exactly.
  */
 export function capabilityDiagnostic(agent: TextPrimitive, target: Target, dropped: string[]): Diagnostic {
   return {
@@ -72,7 +72,7 @@ export function unparsedFrontmatterDiagnostic(agent: TextPrimitive, target: Targ
   };
 }
 
-/** Table des événements de hook : nom canonique (forme Claude) → nom natif par cible. */
+/** Table of hook events: canonical name (Claude form) → native name per target. */
 const HOOK_EVENTS: Record<string, Record<Target, string | null>> = {
   SessionStart: {
     claude: 'SessionStart',
@@ -121,7 +121,7 @@ const HOOK_ALIASES: Record<string, string> = {
 
 function canonicalEvent(source: string): string | undefined {
   if (source in HOOK_EVENTS) return source;
-  if (source === 'stop') return undefined; // « stop » en minuscules n'est natif nulle part sauf Cursor : ambigu, non deviné
+  if (source === 'stop') return undefined; // lowercase "stop" is native nowhere except Cursor: ambiguous, not guessed
   return HOOK_ALIASES[source.toLowerCase()];
 }
 
@@ -134,8 +134,8 @@ export interface TranslatedHook {
 }
 
 /**
- * Traduit les hooks d'un paquet pour une cible. Tout ce qui n'a pas
- * d'équivalent sûr est ignoré avec un diagnostic, jamais deviné.
+ * Translates the hooks of a package for a target. Anything that has no
+ * safe equivalent is skipped with a diagnostic, never guessed.
  */
 export function translateHooks(
   hooks: HookPrimitive[],
@@ -208,7 +208,7 @@ export function translateHooks(
 
 export type VarStyle = 'plain' | 'env-prefixed';
 
-/** Convertit les références de variables `${VAR}` / `${env:VAR}` vers le style de la cible. */
+/** Converts `${VAR}` / `${env:VAR}` variable references to the style of the target. */
 export function convertVars(value: string, style: VarStyle): string {
   if (style === 'plain') return value.replace(/\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}/g, '${$1}');
   return value.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, '${env:$1}');
@@ -222,7 +222,7 @@ export function convertVarMap(
   return Object.fromEntries(Object.entries(map).map(([k, v]) => [k, convertVars(v, style)]));
 }
 
-/** Serveurs MCP déployables : seuls les serveurs auto-définis le sont en v0.1. */
+/** Deployable MCP servers: only self-defined servers are, in v0.1. */
 export function deployableMcp(
   mcp: McpDependency[],
   target: Target,

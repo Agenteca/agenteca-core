@@ -5,9 +5,9 @@ import { t } from './i18n.js';
 const STD_TAG_PREFIX = 'tag:yaml.org,2002:';
 
 /**
- * Analyse un document YAML sous le sous-ensemble sûr d'OpenAPM (req-mf-020) :
- * YAML 1.2 (pas de coercition octale 1.1), ancres et alias refusés, tags
- * personnalisés refusés.
+ * Parses a YAML document under OpenAPM's safe subset (req-mf-020):
+ * YAML 1.2 (no 1.1 octal coercion), anchors and aliases refused, custom
+ * tags refused.
  */
 export function parseYamlDocument(
   text: string,
@@ -48,7 +48,7 @@ export function parseYamlDocument(
   return doc;
 }
 
-/** Analyse en objet JavaScript simple, sous le même sous-ensemble sûr. */
+/** Parses into a plain JavaScript object, under the same safe subset. */
 export function parseYamlSafe(text: string, file: string, code: ErrorCode = 'MANIFEST_INVALID'): unknown {
   return parseYamlDocument(text, file, code).toJS({ maxAliasCount: 0 });
 }
@@ -57,7 +57,7 @@ export function stringifyYaml(value: unknown): string {
   return stringify(value, { version: '1.2', lineWidth: 0, aliasDuplicateObjects: false });
 }
 
-/** Sépare le frontmatter YAML du corps d'un fichier Markdown. */
+/** Splits the YAML front matter from the body of a Markdown file. */
 export function splitFrontmatter(
   text: string,
   file: string,
@@ -78,7 +78,7 @@ export function splitFrontmatter(
   }
 }
 
-/** Reconstruit un fichier Markdown avec frontmatter (clés non définies omises). */
+/** Rebuilds a Markdown file with front matter (undefined keys omitted). */
 export function withFrontmatter(frontmatter: Record<string, unknown>, body: string): string {
   const clean: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(frontmatter)) {

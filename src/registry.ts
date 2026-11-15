@@ -28,7 +28,7 @@ export interface RegistryEntry extends CatalogEntry {
   registry: string;
 }
 
-/** Lit le catalogue d'un dossier : `apm.yml` avec bloc `marketplace:` d'abord, sinon un marketplace.json natif. */
+/** Reads the catalog of a folder: `apm.yml` with a `marketplace:` block first, otherwise a native marketplace.json. */
 async function catalogFromDir(
   dir: string,
   name: string,
@@ -42,7 +42,7 @@ async function catalogFromDir(
     ).manifest;
     if (manifest.marketplace !== undefined) {
       const catalog = catalogFromManifestBlock(manifest.marketplace, manifest.name);
-      // Les sources relatives du bloc sont rapportées au dépôt ou au dossier du registre.
+      // Relative sources of the block are resolved against the repository or the folder of the registry.
       for (const e of catalog.entries) {
         if (/^\.{1,2}\//.test(e.source)) {
           const rel = e.source.replace(/^\.\//, '');
@@ -70,7 +70,7 @@ async function catalogFromDir(
   );
 }
 
-/** Charge le catalogue complet d'un registre. */
+/** Loads the full catalog of a registry. */
 export async function loadCatalog(
   reg: RegistryConfig,
   ctx: RegistryContext,
@@ -102,7 +102,7 @@ export async function loadCatalog(
       await rm(work, { recursive: true, force: true });
     }
   }
-  // Serveur Agenteca : API REST décrite par l'OpenAPI de agenteca-server.
+  // Agenteca server: REST API described by the OpenAPI document of agenteca-server.
   const doFetch = ctx.fetch ?? fetch;
   const entries: CatalogEntry[] = [];
   const base = reg.url.replace(/\/+$/, '');
@@ -148,11 +148,11 @@ export function matchesQuery(entry: CatalogEntry, query: string): boolean {
 
 export interface SearchResult {
   entries: RegistryEntry[];
-  /** Registres en échec : la recherche continue sur les autres, l'échec est rapporté. */
+  /** Failed registries: the search goes on with the others, the failure is reported. */
   failures: Array<{ registry: string; message: string }>;
 }
 
-/** Cherche dans tous les registres configurés (ou un seul). */
+/** Searches every configured registry (or a single one). */
 export async function searchRegistries(
   registries: RegistryConfig[],
   query: string,

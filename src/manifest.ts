@@ -26,7 +26,7 @@ export const CANONICAL_TARGETS = [
   'all',
 ] as const;
 
-/** Cibles pour lesquelles Agenteca fournit un adaptateur. */
+/** Targets for which Agenteca provides an adapter. */
 export const SUPPORTED_TARGETS = ['claude', 'codex', 'copilot', 'cursor'] as const;
 export type Target = (typeof SUPPORTED_TARGETS)[number];
 
@@ -37,10 +37,10 @@ const SEMVER_RE =
 
 export type McpTransport = 'stdio' | 'http' | 'sse' | 'streamable-http';
 
-/** Serveur MCP déclaré dans `dependencies.mcp` (spec §4.3.6). */
+/** MCP server declared in `dependencies.mcp` (spec §4.3.6). */
 export interface McpDependency {
   name: string;
-  /** `false` : serveur auto-défini ; chaîne ou absent : serveur de registre MCP. */
+  /** `false`: self-defined server; string or absent: MCP registry server. */
   registry?: boolean | string;
   transport?: McpTransport;
   command?: string;
@@ -59,7 +59,7 @@ export interface Manifest {
   author?: string;
   license?: string;
   defaultHost: string;
-  /** Cibles déclarées, normalisées ; `undefined` si le manifeste n'en déclare pas. */
+  /** Declared targets, normalised; `undefined` if the manifest declares none. */
   targets?: string[];
   apm: DepRef[];
   devApm: DepRef[];
@@ -74,7 +74,7 @@ function invalid(file: string, message: string): never {
   throw new AhubError('MANIFEST_INVALID', t('{0}: {1}', [file, message]), { file });
 }
 
-/** Normalise une liste de cibles (alias → `copilot`), rejette les inconnues (req-mf-005). */
+/** Normalises a list of targets (alias → `copilot`), rejects unknown ones (req-mf-005). */
 export function normalizeTargets(value: unknown, file: string): string[] | undefined {
   if (value === undefined || value === null) return undefined;
   const list = Array.isArray(value) ? value : [value];
@@ -115,7 +115,7 @@ function parseMcpEntry(entry: unknown, file: string): McpDependency {
   if (Array.isArray(o.tools)) dep.tools = o.tools.map(String);
   if (typeof o.version === 'string') dep.version = o.version;
 
-  // req-mf-012 : validation des serveurs auto-définis.
+  // req-mf-012: validation of self-defined servers.
   if (dep.registry === false) {
     if (!dep.transport) invalid(file, t('MCP server "{0}": "transport" is missing', [dep.name]));
     if (dep.transport === 'stdio') {
@@ -138,7 +138,7 @@ function mapOfStrings(value: object): Record<string, string> {
   return out;
 }
 
-/** Lit un scalaire tel qu'écrit dans le fichier, pour éviter la coercition numérique (`1.0` → `1`). */
+/** Reads a scalar as written in the file, to avoid numeric coercion (`1.0` → `1`). */
 function scalarSource(doc: Document, key: string): string | undefined {
   const node = doc.get(key, true);
   if (!isScalar(node)) return undefined;
@@ -155,8 +155,8 @@ function depList(doc: Document, block: string, key: string): unknown[] {
 }
 
 /**
- * Manifeste `apm.yml` chargé. Le document YAML d'origine est conservé pour
- * que la réécriture préserve commentaires et clés inconnues (req-mf-006, req-ext-001).
+ * Loaded `apm.yml` manifest. The original YAML document is kept so that
+ * rewriting preserves comments and unknown keys (req-mf-006, req-ext-001).
  */
 export class ManifestFile {
   private constructor(
@@ -218,7 +218,7 @@ export class ManifestFile {
     return new ManifestFile(doc, manifest, file);
   }
 
-  /** Crée un manifeste minimal conforme (name + version). */
+  /** Creates a minimal conforming manifest (name + version). */
   static create(init: {
     name: string;
     version?: string;
@@ -257,8 +257,8 @@ export class ManifestFile {
   }
 
   /**
-   * Ajoute ou remplace une dépendance directe, en forme canonique (req-mf-009).
-   * Retourne `true` si une entrée existante de même identité a été remplacée.
+   * Adds or replaces a direct dependency, in canonical form (req-mf-009).
+   * Returns `true` if an existing entry with the same identity was replaced.
    */
   setApmDependency(ref: DepRef): boolean {
     if (ref.kind === 'registry') {
@@ -278,7 +278,7 @@ export class ManifestFile {
     return false;
   }
 
-  /** Forme chaîne si possible, forme objet si des options (alias, skills, targets) sont présentes. */
+  /** String form when possible, object form when options (alias, skills, targets) are present. */
   private serializeDep(ref: DepRef): unknown {
     const canonical = canonicalDepString(ref, this.manifest.defaultHost);
     if (!ref.alias && !ref.skills && !ref.targets) return canonical;
@@ -294,7 +294,7 @@ export class ManifestFile {
     return out;
   }
 
-  /** Retire la dépendance directe d'identité donnée. Retourne `false` si elle est absente. */
+  /** Removes the direct dependency with the given identity. Returns `false` if it is absent. */
   removeApmDependency(identity: string): boolean {
     const index = this.manifest.apm.findIndex((d) => depIdentity(d) === identity);
     if (index < 0) return false;
@@ -304,8 +304,8 @@ export class ManifestFile {
   }
 
   /**
-   * Retrouve une dépendance directe par identité exacte, par `propriétaire/dépôt`,
-   * ou par nom court de dépôt s'il n'est pas ambigu.
+   * Finds a direct dependency by exact identity, by `owner/repo`,
+   * or by short repository name when it is not ambiguous.
    */
   findDependency(query: string): DepRef | undefined {
     const q = query.replace(/#.*$/, '');

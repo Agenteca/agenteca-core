@@ -37,7 +37,7 @@ import { t } from './i18n.js';
 export const AHUB_VERSION = '0.1.0';
 
 export interface ProjectContext {
-  /** Racine de déploiement : dossier du projet, ou dossier personnel en portée utilisateur. */
+  /** Deployment root: the project folder, or the home folder in user scope. */
   root: string;
   scope: Scope;
   home: string;
@@ -48,8 +48,8 @@ export interface ProjectContext {
 }
 
 /**
- * Contexte d'exécution. Portée utilisateur : manifeste et lockfile dans
- * `~/.apm/` (même emplacement que `apm -g`, déclaré dans CONFORMANCE.md, req-tg-014).
+ * Execution context. User scope: manifest and lockfile in
+ * `~/.apm/` (same location as `apm -g`, declared in CONFORMANCE.md, req-tg-014).
  */
 export function createContext(opts: {
   cwd: string;
@@ -102,14 +102,14 @@ export async function loadLock(ctx: ProjectContext): Promise<Lockfile | undefine
 
 export interface InstallRequest {
   add?: DepRef[];
-  /** Dépendances directes à retirer (identité, `propriétaire/dépôt` ou nom court). */
+  /** Direct dependencies to remove (identity, `owner/repo` or short name). */
   remove?: string[];
-  /** Dépendances directes à résoudre de nouveau ; `all` pour toutes. */
+  /** Direct dependencies to resolve again; `all` for every one. */
   update?: string[] | 'all';
   frozen?: boolean;
   targets?: Target[];
   legacySkillPaths?: boolean;
-  /** Crée le manifeste s'il n'existe pas (cas de `ahub add` dans un projet vierge). */
+  /** Creates the manifest if it does not exist (case of `ahub add` in an empty project). */
   initName?: string;
 }
 
@@ -123,7 +123,7 @@ export interface PackageReport {
   resolvedTag?: string;
   depth: number;
   direct: boolean;
-  /** Changement par rapport au lockfile précédent. */
+  /** Change compared with the previous lockfile. */
   change: 'added' | 'updated' | 'unchanged';
   previousCommit?: string;
   targets: Target[];
@@ -137,14 +137,14 @@ export interface PreparedInstall {
   removedPackages: string[];
   plan: DeployPlan;
   findings: Finding[];
-  /** Vrai si un constat critique interdit le déploiement sans contournement explicite. */
+  /** True if a critical finding forbids deployment without an explicit override. */
   blocked: boolean;
   executables: ExecutableNotice[];
   diagnostics: Diagnostic[];
   planHash: string;
   manifestText: string;
   manifestChanged: boolean;
-  /** Internes, non sérialisables. */
+  /** Internal, not serialisable. */
   internal: {
     prepared: PreparedDeploy;
     resolved: ResolvedPackage[];
@@ -163,7 +163,7 @@ function slug(name: string): string {
   );
 }
 
-/** Détermine les cibles : option explicite > manifeste > détection (matrice APM). Échec fermé sinon. */
+/** Determines the targets: explicit option > manifest > detection (APM matrix). Fails closed otherwise. */
 export function selectTargets(
   ctx: ProjectContext,
   explicit: Target[] | undefined,
@@ -205,9 +205,9 @@ function priorStates(lock: Lockfile | undefined): PriorPackageState[] {
 }
 
 /**
- * Prépare une installation sans rien écrire : résolution, lecture des paquets,
- * scan de sécurité, plan de déploiement. Le résultat est ce qui est montré à
- * l'utilisateur avant confirmation.
+ * Prepares an installation without writing anything: resolution, reading of the packages,
+ * security scan, deployment plan. The result is what is shown to
+ * the user before confirmation.
  */
 export async function prepareInstall(
   ctx: ProjectContext,
@@ -295,7 +295,7 @@ export async function prepareInstall(
       if (pkg.ref.skills && pkg.ref.skills.length > 0) {
         const available = pkg.content.skills.map((s) => s.name);
         if (!pkg.ref.skills.some((s) => available.includes(s))) {
-          // req-mf-022 : une sélection insatisfaite n'est jamais une demande de retrait.
+          // req-mf-022: an unsatisfied selection is never a removal request.
           throw new AhubError(
             'RESOLUTION_FAILED',
             t('{0}: none of the requested skills ({1}) exists. Available: {2}.', [
@@ -400,7 +400,7 @@ export async function discardInstall(prepared: PreparedInstall): Promise<void> {
 }
 
 export interface InstallOptions extends ApplyOptions {
-  /** Contournement explicite du refus sur constat critique. */
+  /** Explicit override of the refusal on a critical finding. */
   allowUnsafe?: boolean;
 }
 
@@ -408,7 +408,7 @@ export interface InstallResult extends ApplyResult {
   lockfile: Lockfile;
 }
 
-/** Applique une installation préparée, puis écrit le manifeste et le lockfile. */
+/** Applies a prepared installation, then writes the manifest and the lockfile. */
 export async function applyInstall(p: PreparedInstall, opts: InstallOptions = {}): Promise<InstallResult> {
   const { ctx } = p;
   try {
@@ -446,7 +446,7 @@ export async function applyInstall(p: PreparedInstall, opts: InstallOptions = {}
     for (const pkg of p.internal.resolved) {
       const record = p.internal.prepared.records.get(pkg.identity)!;
       const report = p.packages.find((r) => r.identity === pkg.identity)!;
-      // Les champs inconnus de l'entrée précédente sont conservés (req-lk-011).
+      // Unknown fields of the previous entry are kept (req-lk-011).
       const entry: LockEntry = { ...(prevById.get(pkg.identity) ?? {}) };
       for (const k of [
         'resolved_ref',
@@ -486,8 +486,8 @@ export async function applyInstall(p: PreparedInstall, opts: InstallOptions = {}
         entry.source = 'local';
         entry.local_path = pkg.localPath!;
         entry.content_hash = pkg.contentHash!;
-        // La spec ne l'exige que pour git, mais l'outil apm (0.35.0) refuse un lockfile dont une
-        // entrée locale n'a pas de `repo_url` ; il écrit lui-même `_local/<dossier>`.
+        // The spec only requires it for git, but the apm tool (0.35.0) refuses a lockfile whose
+        // local entry has no `repo_url`; it writes `_local/<folder>` itself.
         entry.repo_url = `_local/${path.basename(pkg.dir)}`;
       }
       entry.name = pkg.content.name;
@@ -519,7 +519,7 @@ export async function applyInstall(p: PreparedInstall, opts: InstallOptions = {}
       lock.mcp_configs = Object.fromEntries(
         [...mcpNames].sort().map((n) => [n, p.internal.mcpConfigs[n] ?? {}]),
       );
-      // Lu par apm pour savoir quelles entrées MCP sont gérées, et ne pas les prendre pour celles de l'utilisateur.
+      // Read by apm to know which MCP entries are managed, so as not to take them for the user's own.
       lock.mcp_target_servers = Object.fromEntries(
         Object.keys(mcpByTarget)
           .sort()
@@ -591,7 +591,7 @@ export async function listOutdated(ctx: ProjectContext): Promise<OutdatedInfo[]>
 export interface InspectedFile {
   path: string;
   size: number;
-  /** Contenu texte, absent pour les fichiers binaires ou trop gros. */
+  /** Text content, absent for binary or too large files. */
   text?: string;
 }
 
@@ -609,7 +609,7 @@ export interface PackageInspection {
   diagnostics: Diagnostic[];
 }
 
-/** Résout et lit un paquet sans rien installer : contenu visible avant installation. */
+/** Resolves and reads a package without installing anything: content visible before installation. */
 export async function inspectPackage(
   ctx: ProjectContext,
   dep: string,

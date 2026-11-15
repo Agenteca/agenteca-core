@@ -18,7 +18,7 @@ const SHA = 'a1b2c3d4e5f6789012345678901234567890abcd';
 const H = `sha256:${'0'.repeat(64)}`;
 
 describe('lockfile apm.lock.yaml (spec §5)', () => {
-  it('trie les entrées, omet les champs non définis et valide le schéma officiel', () => {
+  it('sorts entries, omits undefined fields and validates against the official schema', () => {
     const text = serializeLockfile({
       lockfile_version: '1',
       dependencies: [
@@ -53,7 +53,7 @@ describe('lockfile apm.lock.yaml (spec §5)', () => {
     expect(validateLock(data), JSON.stringify(validateLock.errors)).toBe(true);
   });
 
-  it('conserve les champs inconnus et les extensions x-* (req-lk-011, req-lk-014)', () => {
+  it('keeps unknown fields and x-* extensions (req-lk-011, req-lk-014)', () => {
     const src = [
       'lockfile_version: "1"',
       'x-top: {keep: true}',
@@ -73,7 +73,7 @@ describe('lockfile apm.lock.yaml (spec §5)', () => {
     expect(out).toContain('future_top: 3');
   });
 
-  it('lit l’identité d’une entrée écrite par apm (hôte à part) comme la sienne', () => {
+  it('reads the identity of an entry written by apm (separate host) as its own', () => {
     expect(entryIdentity({ repo_url: 'github.com/acme/tools' })).toBe('github.com/acme/tools');
     expect(entryIdentity({ repo_url: 'acme/tools', host: 'github.com', virtual_path: 'pkg/a' })).toBe(
       'github.com/acme/tools/pkg/a',
@@ -85,20 +85,20 @@ describe('lockfile apm.lock.yaml (spec §5)', () => {
     );
   });
 
-  it('refuse une version inconnue en proposant les deux issues (req-lk-004)', () => {
+  it('refuses an unknown version, offering the two ways out (req-lk-004)', () => {
     expect(() => parseLockfile('lockfile_version: "9"\ndependencies: []\n')).toThrowError(
       /Update ahub, or regenerate/,
     );
   });
 
-  it('ne rétrograde jamais la version 2 (req-lk-002)', () => {
+  it('never downgrades version 2 (req-lk-002)', () => {
     const previous = parseLockfile('lockfile_version: "2"\ndependencies: []\n');
     expect(serializeLockfile({ lockfile_version: '1', dependencies: [] }, previous)).toContain(
       'lockfile_version: "2"',
     );
   });
 
-  it('accepte l’hexadécimal nu en lecture et écrit l’enveloppe (req-lk-016)', () => {
+  it('accepts bare hexadecimal on reading and writes the envelope (req-lk-016)', () => {
     const lock = parseLockfile(
       `lockfile_version: "1"\ndependencies:\n  - repo_url: github.com/a/a\n    resolved_commit: "${SHA}"\n    tree_sha256: "${'f'.repeat(64)}"\n`,
     );
@@ -107,7 +107,7 @@ describe('lockfile apm.lock.yaml (spec §5)', () => {
 });
 
 describe('empreintes', () => {
-  it('normalise CRLF en LF pour le texte, pas le CR seul, pas le binaire (req-lk-012)', () => {
+  it('normalises CRLF to LF for text, not a lone CR, not binary (req-lk-012)', () => {
     expect(fileHash(Buffer.from('a\r\nb\r\n'))).toBe(fileHash(Buffer.from('a\nb\n')));
     expect(fileHash(Buffer.from('a\rb'))).not.toBe(fileHash(Buffer.from('a\nb')));
     const binary = Buffer.from([0, 13, 10, 1]);
@@ -115,7 +115,7 @@ describe('empreintes', () => {
     expect(fileHash(Buffer.from('x'))).toMatch(/^sha256:[0-9a-f]{64}$/);
   });
 
-  it('calcule l’arbre canonique trié octet par octet (spec §5.6.4)', () => {
+  it('computes the canonical tree sorted byte by byte (spec §5.6.4)', () => {
     const blob = sha256Hex('contenu');
     const expected = sha256Hex(`100644 a.md ${blob}\n100755 b.sh ${blob}\n`);
     expect(

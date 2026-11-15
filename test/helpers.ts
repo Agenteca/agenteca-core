@@ -36,7 +36,7 @@ const IDENT = [
   'tag.gpgsign=false',
 ];
 
-/** Ajoute un commit (et un tag éventuel) à un dépôt git local de test. Retourne le SHA. */
+/** Adds a commit (and an optional tag) to a local test git repository. Returns the SHA. */
 export async function commit(
   dir: string,
   files: Record<string, string | Buffer>,
@@ -60,7 +60,7 @@ export async function gitRepo(
   return { dir, sha };
 }
 
-/** Contexte de projet isolé : dossier personnel, cache et miroirs git propres au test. */
+/** Isolated project context: home folder, cache and git mirrors of the test's own. */
 export async function testContext(
   mirrors: Record<string, string> = {},
   opts: { global?: boolean } = {},
@@ -75,7 +75,7 @@ export async function testContext(
   });
 }
 
-/** Liste récursive des fichiers d'un dossier (chemins POSIX relatifs, triés). */
+/** Recursive list of the files of a folder (relative POSIX paths, sorted). */
 export async function listTree(dir: string, rel = ''): Promise<string[]> {
   const out: string[] = [];
   for (const e of await readdir(path.join(dir, rel), { withFileTypes: true })) {
@@ -90,7 +90,7 @@ export function officialSchema(name: string): Record<string, unknown> {
   return require(`../vendor/openapm/${name}`) as Record<string, unknown>;
 }
 
-/** Paquet de démonstration couvrant toutes les primitives. */
+/** Demonstration package covering every primitive. */
 export function demoPackage(version = '1.0.0', extra: Record<string, string> = {}): Record<string, string> {
   return {
     'apm.yml': [

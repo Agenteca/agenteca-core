@@ -14,10 +14,10 @@ import type { Adapter } from './types.js';
 import { t } from '../i18n.js';
 
 /**
- * OpenAI Codex. Agents en TOML dans `.codex/agents/`, skills dans
- * `.agents/skills/`, hooks dans `.codex/hooks.json`, serveurs MCP dans
- * `.codex/config.toml`. Codex n'a pas de commandes de projet : elles sont
- * converties en skills (écart assumé par rapport à la matrice APM).
+ * OpenAI Codex. Agents in TOML in `.codex/agents/`, skills in
+ * `.agents/skills/`, hooks in `.codex/hooks.json`, MCP servers in
+ * `.codex/config.toml`. Codex has no project commands: they are
+ * converted into skills (deliberate deviation from the APM matrix).
  */
 export const codexAdapter: Adapter = (content, ctx) => {
   const r = emptyResult();
@@ -31,7 +31,7 @@ export const codexAdapter: Adapter = (content, ctx) => {
       name: a.name,
       description: typeof fm.description === 'string' ? fm.description : `Agent ${a.name}`,
     };
-    // req-tg-015 : `model` et `model_reasoning_effort` restent des clés TOML de premier niveau.
+    // req-tg-015: `model` and `model_reasoning_effort` stay top-level TOML keys.
     if (typeof fm.model === 'string') doc.model = fm.model;
     if (typeof fm.model_reasoning_effort === 'string') doc.model_reasoning_effort = fm.model_reasoning_effort;
     doc.developer_instructions = a.body.trim() + '\n';
@@ -113,7 +113,7 @@ export const codexAdapter: Adapter = (content, ctx) => {
     if (m.transport === 'stdio') {
       value.command = m.command!;
       value.args = m.args ?? [];
-      // config.toml ne développe pas les variables : une référence pure `${VAR}` devient `env_vars`.
+      // config.toml does not expand variables: a bare `${VAR}` reference becomes `env_vars`.
       const env: Record<string, string> = {};
       const envVars: string[] = [];
       for (const [k, v] of Object.entries(m.env ?? {})) {

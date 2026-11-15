@@ -23,7 +23,7 @@ async function demoContent() {
   return readPackage(dir, 'demo-pack');
 }
 
-/** Déploie le paquet de démonstration pour une cible, puis le retire entièrement. */
+/** Deploys the demonstration package for a target, then removes it entirely. */
 async function deployAndRemove(
   target: Target,
   scope: 'project' | 'user' = 'project',
@@ -58,8 +58,8 @@ async function deployAndRemove(
   return { res, deployed, snapshot, before, after, root };
 }
 
-describe('lecture du paquet', () => {
-  it('découvre toutes les primitives d’un paquet APM', async () => {
+describe('package reading', () => {
+  it('discovers every primitive of an APM package', async () => {
     const c = await demoContent();
     expect(c.layout).toBe('apm_package');
     expect(c.skills.map((s) => s.name)).toEqual(['hello-skill']);
@@ -72,7 +72,7 @@ describe('lecture du paquet', () => {
     expect(c.diagnostics).toEqual([]);
   });
 
-  it('lit un dépôt SKILL.md seul, une collection de skills et un plugin Claude', async () => {
+  it('reads a lone SKILL.md repository, a collection of skills and a Claude plugin', async () => {
     const bundle = await tmpDir();
     await writeTree(bundle, {
       'SKILL.md': '---\nname: solo\ndescription: Seul.\n---\nCorps\n',
@@ -107,7 +107,7 @@ describe('lecture du paquet', () => {
     ]);
   });
 
-  it('ignore les liens symboliques et signale les skills non conformes', async () => {
+  it('skips symbolic links and reports non-conforming skills', async () => {
     const { symlink } = await import('node:fs/promises');
     const dir = await tmpDir();
     await writeTree(dir, { 'skills/Bad_Name/SKILL.md': '---\nname: other\n---\n' });
@@ -120,7 +120,7 @@ describe('lecture du paquet', () => {
     expect(codes).toContain('SKILL_DESCRIPTION_INVALID');
   });
 
-  it('refuse un dossier sans disposition reconnue', async () => {
+  it('refuses a folder with no recognised layout', async () => {
     const dir = await tmpDir();
     await writeTree(dir, { 'README.md': 'rien' });
     await expect(readPackage(dir, 'x')).rejects.toThrowError(/no recognised package layout/);
@@ -128,7 +128,7 @@ describe('lecture du paquet', () => {
 });
 
 describe('adaptateur Claude Code', () => {
-  it('déploie puis retire sans laisser de trace', async () => {
+  it('deploys then removes without leaving a trace', async () => {
     const { deployed, snapshot, after, res } = await deployAndRemove('claude');
     expect(deployed).toEqual([
       '.claude/agents/reviewer.md',
@@ -175,7 +175,7 @@ describe('adaptateur Claude Code', () => {
     expect(after).toEqual([]);
   });
 
-  it('préserve une configuration existante, au déploiement comme au retrait', async () => {
+  it('preserves an existing configuration, on deployment as on removal', async () => {
     const settings =
       JSON.stringify(
         {
@@ -198,7 +198,7 @@ describe('adaptateur Claude Code', () => {
     );
   });
 
-  it('écrit le MCP dans ~/.claude.json en portée utilisateur', async () => {
+  it('writes MCP to ~/.claude.json in user scope', async () => {
     const { deployed, after } = await deployAndRemove('claude', 'user');
     expect(deployed).toContain('.claude.json');
     expect(deployed).not.toContain('.mcp.json');
@@ -207,7 +207,7 @@ describe('adaptateur Claude Code', () => {
 });
 
 describe('adaptateur Codex', () => {
-  it('déploie puis retire sans laisser de trace', async () => {
+  it('deploys then removes without leaving a trace', async () => {
     const { deployed, snapshot, after, res } = await deployAndRemove('codex');
     expect(deployed).toEqual([
       '.agents/skills/hello-skill/SKILL.md',
@@ -241,7 +241,7 @@ describe('adaptateur Codex', () => {
     expect(after).toEqual([]);
   });
 
-  it('préserve un config.toml existant', async () => {
+  it('preserves an existing config.toml', async () => {
     const existing = 'model = "gpt-5"\n\n[mcp_servers.perso]\ncommand = "x"\n';
     const { snapshot, after, root } = await deployAndRemove('codex', 'project', {
       '.codex/config.toml': existing,
@@ -255,7 +255,7 @@ describe('adaptateur Codex', () => {
 });
 
 describe('adaptateur GitHub Copilot', () => {
-  it('déploie puis retire sans laisser de trace', async () => {
+  it('deploys then removes without leaving a trace', async () => {
     const { deployed, snapshot, after, res } = await deployAndRemove('copilot');
     expect(deployed).toEqual([
       '.agents/skills/hello-skill/SKILL.md',
@@ -267,7 +267,7 @@ describe('adaptateur GitHub Copilot', () => {
       '.github/prompts/summarize.prompt.md',
       '.vscode/mcp.json',
     ]);
-    // Copilot n'a pas de filtre par outil : le hook filtré est ignoré plutôt qu'élargi.
+    // Copilot has no per-tool matcher: the filtered hook is skipped rather than widened.
     expect(JSON.parse(snapshot['.github/hooks/demo-pack-notify.json']!)).toEqual({
       version: 1,
       hooks: { agentStop: [{ type: 'command', bash: 'echo fin' }] },
@@ -291,7 +291,7 @@ describe('adaptateur GitHub Copilot', () => {
     expect(after).toEqual([]);
   });
 
-  it('utilise ~/.copilot en portée utilisateur', async () => {
+  it('uses ~/.copilot in user scope', async () => {
     const { deployed, after } = await deployAndRemove('copilot', 'user');
     expect(deployed).toContain('.copilot/agents/reviewer.agent.md');
     expect(deployed).toContain('.copilot/mcp-config.json');
@@ -301,7 +301,7 @@ describe('adaptateur GitHub Copilot', () => {
 });
 
 describe('adaptateur Cursor', () => {
-  it('déploie puis retire sans laisser de trace', async () => {
+  it('deploys then removes without leaving a trace', async () => {
     const { deployed, snapshot, after } = await deployAndRemove('cursor');
     expect(deployed).toEqual([
       '.agents/skills/hello-skill/SKILL.md',
@@ -330,7 +330,7 @@ describe('adaptateur Cursor', () => {
     expect(after).toEqual([]);
   });
 
-  it('garde les hooks existants et la clé version partagée', async () => {
+  it('keeps existing hooks and the shared version key', async () => {
     const existing =
       JSON.stringify({ version: 1, hooks: { stop: [{ command: 'echo perso' }] } }, null, 2) + '\n';
     const { after, root } = await deployAndRemove('cursor', 'project', { '.cursor/hooks.json': existing });
@@ -341,8 +341,8 @@ describe('adaptateur Cursor', () => {
   });
 });
 
-describe('déploiement multi-cibles', () => {
-  it('partage un seul exemplaire des skills entre Codex, Copilot et Cursor', async () => {
+describe('multi-target deployment', () => {
+  it('shares a single copy of the skills between Codex, Copilot and Cursor', async () => {
     const root = await tmpDir();
     const content = await demoContent();
     const ops: PackageOps = { identity: 'id', name: 'demo-pack', files: [], merges: [] };
@@ -362,7 +362,7 @@ describe('déploiement multi-cibles', () => {
     expect(await listTree(root)).toEqual([]);
   });
 
-  it('refuse tout chemin qui sortirait de la racine ou traverserait un lien', async () => {
+  it('refuses any path that would leave the root or go through a link', async () => {
     const { symlink } = await import('node:fs/promises');
     const root = await tmpDir();
     const outside = await tmpDir();
@@ -378,7 +378,7 @@ describe('déploiement multi-cibles', () => {
     await expect(prepareDeploy(root, [bad('.claude/agents/x.md')], [])).rejects.toThrowError(/symbolic link/);
   });
 
-  it('détecte les outils présents dans un projet', async () => {
+  it('detects the tools present in a project', async () => {
     const root = await tmpDir();
     expect(detectTargets(root, 'project')).toEqual([]);
     await writeTree(root, {

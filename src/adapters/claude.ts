@@ -15,9 +15,9 @@ import {
 import type { Adapter } from './types.js';
 
 /**
- * Claude Code. Chemins vérifiés dans la documentation officielle (10/11/2026) :
- * `.claude/{agents,skills,commands,rules}`, hooks dans `.claude/settings.json`,
- * serveurs MCP dans `.mcp.json` (projet) ou `~/.claude.json` (utilisateur).
+ * Claude Code. Paths checked in the official documentation (10 November 2026):
+ * `.claude/{agents,skills,commands,rules}`, hooks in `.claude/settings.json`,
+ * MCP servers in `.mcp.json` (project) or `~/.claude.json` (user).
  */
 export const claudeAdapter: Adapter = (content, ctx) => {
   const r = emptyResult();
@@ -35,7 +35,7 @@ export const claudeAdapter: Adapter = (content, ctx) => {
     };
     if (tools) {
       out.tools = tools.join(', ');
-      // Les noms d'outils sont propres à chaque produit : transmis tels quels, signalés (req-tg-006).
+      // Tool names are specific to each product: passed as is, reported (req-tg-006).
       r.diagnostics.push(capabilityDiagnostic(a, 'claude', ['tools']));
     }
     if (typeof fm.model === 'string') out.model = fm.model;
@@ -113,7 +113,7 @@ export const claudeAdapter: Adapter = (content, ctx) => {
       entries: mcp.servers.map((m) => {
         const value: Record<string, unknown> = {};
         if (m.transport === 'stdio') {
-          // `type` est facultatif pour Claude Code ; il est écrit pour produire la même entrée que apm.
+          // `type` is optional for Claude Code; it is written to produce the same entry as apm.
           value.type = 'stdio';
           value.command = convertVars(m.command!, 'plain');
           value.args = (m.args ?? []).map((a) => convertVars(a, 'plain'));

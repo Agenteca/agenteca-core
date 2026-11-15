@@ -15,8 +15,8 @@ import type { Adapter } from './types.js';
 import { t } from '../i18n.js';
 
 /**
- * Cursor. Sous-agents `.cursor/agents/*.md`, skills `.agents/skills/` (ou
- * `.cursor/skills/`), commandes `.cursor/commands/*.md`, règles
+ * Cursor. Subagents `.cursor/agents/*.md`, skills `.agents/skills/` (or
+ * `.cursor/skills/`), commands `.cursor/commands/*.md`, rules
  * `.cursor/rules/*.mdc`, hooks `.cursor/hooks.json`, MCP `.cursor/mcp.json`.
  */
 export const cursorAdapter: Adapter = (content, ctx) => {

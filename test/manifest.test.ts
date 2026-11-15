@@ -12,13 +12,13 @@ describe('manifeste apm.yml (spec §4)', () => {
     expect(m).toMatchObject({ name: 'demo', version: '1.0.0', apm: [], mcp: [] });
   });
 
-  it('garde la version en chaîne même si elle ressemble à un nombre', () => {
+  it('keeps the version as a string even if it looks like a number', () => {
     const m = ManifestFile.parse('name: demo\nversion: 1.0\n').manifest;
     expect(m.version).toBe('1.0');
     expect(m.diagnostics.map((d) => d.code)).toContain('VERSION_NOT_SEMVER');
   });
 
-  it('refuse les documents non conformes', () => {
+  it('refuses non-conforming documents', () => {
     expect(() => ManifestFile.parse('- a\n- b\n')).toThrowError(/YAML mapping/);
     expect(() => ManifestFile.parse('version: 1.0.0\n')).toThrowError(/name/);
     expect(() => ManifestFile.parse('name: x\n')).toThrowError(/version/);
@@ -30,7 +30,7 @@ describe('manifeste apm.yml (spec §4)', () => {
     );
   });
 
-  it('applique le sous-ensemble YAML sûr (req-mf-020)', () => {
+  it('applies the safe YAML subset (req-mf-020)', () => {
     expect(() => ManifestFile.parse('name: &a x\nversion: 1.0.0\nauthor: *a\n')).toThrowError(
       /anchors|aliases/,
     );
@@ -39,13 +39,13 @@ describe('manifeste apm.yml (spec §4)', () => {
     expect((parseYamlSafe('mode: 0777\n', 't.yml') as { mode: unknown }).mode).toBe(777);
   });
 
-  it('normalise les alias de cible (vscode → copilot)', () => {
+  it('normalises target aliases (vscode → copilot)', () => {
     expect(
       ManifestFile.parse('name: x\nversion: 1.0.0\ntarget: [vscode, claude]\n').manifest.targets,
     ).toEqual(['copilot', 'claude']);
   });
 
-  it('valide les serveurs MCP auto-définis (req-mf-012)', () => {
+  it('validates self-defined MCP servers (req-mf-012)', () => {
     const base = 'name: x\nversion: 1.0.0\ndependencies:\n  mcp:\n';
     expect(() => ManifestFile.parse(`${base}    - {name: s, registry: false}\n`)).toThrowError(/transport/);
     expect(() =>
@@ -63,7 +63,7 @@ describe('manifeste apm.yml (spec §4)', () => {
     expect(ok.mcp[0]).toMatchObject({ name: 's', command: 'my bin', args: [] });
   });
 
-  it('préserve commentaires, clés inconnues et extensions à la réécriture (req-mf-006, req-ext-001)', () => {
+  it('preserves comments, unknown keys and extensions when rewriting (req-mf-006, req-ext-001)', () => {
     const src = [
       '# en-tête à conserver',
       'name: demo',
@@ -92,7 +92,7 @@ describe('manifeste apm.yml (spec §4)', () => {
     expect(again.toString()).toContain('acme/two#^3.0.0');
   });
 
-  it('retrouve une dépendance par nom court', () => {
+  it('finds a dependency by short name', () => {
     const mf = ManifestFile.parse(
       'name: x\nversion: 1.0.0\ndependencies:\n  apm:\n    - acme/one\n    - other/two/sub/pkg\n',
     );
@@ -107,7 +107,7 @@ describe('manifeste apm.yml (spec §4)', () => {
     expect(local.findDependency('./pkgs/local-pkg')?.kind).toBe('local');
   });
 
-  it('produit des manifestes acceptés par le schéma officiel OpenAPM', () => {
+  it('produces manifests accepted by the official OpenAPM schema', () => {
     const mf = ManifestFile.create({ name: 'demo', targets: ['claude', 'codex'] });
     mf.setApmDependency(parseDepString('acme/one#^1.0.0'));
     mf.setApmDependency(parseDepString('./local/pkg'));

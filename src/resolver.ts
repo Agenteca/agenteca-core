@@ -20,21 +20,21 @@ import { t } from './i18n.js';
 
 export interface ResolveOptions {
   git: GitOptions;
-  /** Dossier du manifeste racine : base des chemins locaux. */
+  /** Folder of the root manifest: base of local paths. */
   projectRoot: string;
   home: string;
-  /** Dossier de travail où les paquets sont matérialisés. */
+  /** Working folder where packages are materialised. */
   workDir: string;
   now?: () => Date;
   maxDepth?: number;
-  /** Entrées du lockfile par identité : rejouées telles quelles sauf si rafraîchies. */
+  /** Lockfile entries by identity: replayed as is unless refreshed. */
   locked?: Map<string, LockEntry>;
-  /** Identités à résoudre de nouveau en ignorant le lockfile ; `all` pour toutes. */
+  /** Identities to resolve again ignoring the lockfile; `all` for every one. */
   refresh?: Set<string> | 'all';
-  /** Installation figée : le lockfile fait foi, toute divergence est une erreur. */
+  /** Frozen installation: the lockfile is authoritative, any divergence is an error. */
   frozen?: boolean;
   includeDev?: boolean;
-  /** `false` : ne suit pas les dépendances des paquets (inspection d'un seul paquet). */
+  /** `false`: does not follow the dependencies of packages (inspection of a single package). */
   transitive?: boolean;
 }
 
@@ -62,15 +62,15 @@ export type RefKind = 'semver' | 'literal' | 'none';
 const LITERAL_TAG_RE = /^v?\d+\.\d+\.\d+$/;
 const SHA_RE = /^[0-9a-f]{40}$/;
 
-/** Classe une référence git (req-rs-003) : plage SemVer, littéral, ou absente. */
+/** Classifies a git reference (req-rs-003): SemVer range, literal, or absent. */
 export function classifyRef(ref: string | undefined): RefKind {
   if (ref === undefined || ref === '') return 'none';
   if (SHA_RE.test(ref) || LITERAL_TAG_RE.test(ref)) return 'literal';
-  // Dialecte node-semver imposé par la spec (req-rs-007).
+  // node-semver dialect required by the spec (req-rs-007).
   return semver.validRange(ref) !== null && /[\d*xX]/.test(ref) ? 'semver' : 'literal';
 }
 
-/** Tags candidats : `v{version}`, `{version}` ou `{nom}--v{version}` ; les autres sont écartés sans bruit. */
+/** Candidate tags: `v{version}`, `{version}` or `{name}--v{version}`; the others are dropped silently. */
 export function versionsFromTags(tags: Iterable<string>, packageName: string): Map<string, string> {
   const out = new Map<string, string>();
   const prefix = `${packageName}--v`;
@@ -98,7 +98,7 @@ interface Request {
   depth: number;
   by?: string;
   isDev: boolean;
-  /** Dossier du paquet déclarant (pour les chemins locaux) et sa racine autorisée. */
+  /** Folder of the declaring package (for local paths) and its allowed root. */
   baseDir: string;
   boundary?: string;
 }
@@ -106,9 +106,9 @@ interface Request {
 class Restart extends Error {}
 
 /**
- * Résout le graphe de dépendances d'un manifeste : parcours en largeur,
- * intersection des plages SemVer entre chaînes (req-rs-001), échec fermé si
- * l'intersection est vide.
+ * Resolves the dependency graph of a manifest: breadth-first walk,
+ * intersection of SemVer ranges across chains (req-rs-001), fails closed if
+ * the intersection is empty.
  */
 export async function resolveAll(
   manifest: Manifest,
@@ -307,7 +307,7 @@ async function resolveGit(
   const lockMatches =
     lock?.resolved_commit !== undefined &&
     (lock.constraint ?? lock.resolved_ref ?? '') === (ref.ref ?? lock.resolved_ref ?? '') &&
-    // Une plage supplémentaire venue d'une autre chaîne doit rester satisfaite par la version verrouillée.
+    // An extra range coming from another chain must still be satisfied by the locked version.
     (kind !== 'semver' || lockSatisfies(lock, ranges));
 
   if (opts.frozen && !lockMatches) {
@@ -384,7 +384,7 @@ async function resolveGit(
 
   pkg.treeSha256 = envelope(await treeSha256(gitDir, pkg.commit!));
   if (lockMatches && !refreshed && lock!.tree_sha256 && lock!.tree_sha256 !== pkg.treeSha256) {
-    // req-lk-015 : échec fermé si l'arbre ne correspond plus à l'empreinte enregistrée.
+    // req-lk-015: fails closed if the tree no longer matches the recorded hash.
     throw new AhubError(
       'LOCK_MISMATCH',
       t('{0}: expected tree_sha256 {1}, observed {2}', [identity, lock!.tree_sha256, pkg.treeSha256]),
@@ -397,7 +397,7 @@ async function resolveGit(
 
   const shortName = packageShortName(ref);
   if (ref.virtualPath && isVirtualFile(ref.virtualPath)) {
-    // Paquet virtuel d'un seul fichier (req-mf-008) : reconstitué comme un paquet minimal.
+    // Single-file virtual package (req-mf-008): rebuilt as a minimal package.
     const base = path.posix.basename(ref.virtualPath);
     const sub = base.endsWith('.agent.md')
       ? 'agents'
@@ -436,7 +436,7 @@ export interface OutdatedInfo {
   outdated: boolean;
 }
 
-/** Compare une dépendance directe verrouillée avec l'état distant, sans rien installer. */
+/** Compares a locked direct dependency with the remote state, without installing anything. */
 export async function checkOutdated(
   ref: DepRef,
   lock: LockEntry | undefined,

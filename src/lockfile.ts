@@ -7,36 +7,36 @@ export const LOCK_FILE = 'apm.lock.yaml';
 export const LEGACY_LOCK_FILE = 'apm.lock';
 const KNOWN_VERSIONS = ['1', '2'];
 
-/** Entrée fusionnée dans un fichier de configuration partagé (hooks, MCP). */
+/** Entry merged into a shared configuration file (hooks, MCP). */
 export interface MergedEntryRecord {
   /**
-   * `key` : valeur posée à un chemin de clés ; `append` : élément ajouté à une liste ;
-   * `block` : table TOML dans un bloc délimité ; `ensure` : valeur posée seulement si
-   * absente et jamais retirée (clé partagée, par exemple `version`).
+   * `key`: value set at a key path; `append`: item added to a list;
+   * `block`: TOML table in a delimited block; `ensure`: value set only if
+   * absent and never removed (shared key, for example `version`).
    */
   type: 'key' | 'append' | 'block' | 'ensure';
   keyPath: string[];
   value: unknown;
 }
 
-/** Registre de propriété d'un fichier de configuration partagé. */
+/** Ownership register of a shared configuration file. */
 export interface MergedFileRecord {
   path: string;
   format: 'json' | 'toml';
   kind: 'mcp' | 'hooks';
   target: string;
-  /** Le fichier a été créé par Agenteca : il est supprimé s'il redevient vide. */
+  /** The file was created by Agenteca: it is deleted if it becomes empty again. */
   created?: boolean;
   entries: MergedEntryRecord[];
 }
 
-/** Extension fournisseur `x-ahub` d'une entrée (req-ext-001). */
+/** Vendor extension `x-ahub` of an entry (req-ext-001). */
 export interface AhubEntryExtension {
   targets?: string[];
   merged?: MergedFileRecord[];
 }
 
-/** Entrée de dépendance du lockfile (spec §5.2). Les champs inconnus sont conservés. */
+/** Dependency entry of the lockfile (spec §5.2). Unknown fields are kept. */
 export interface LockEntry {
   repo_url?: string;
   alias?: string;
@@ -74,7 +74,7 @@ export interface Lockfile {
   dependencies: LockEntry[];
   mcp_servers?: string[];
   mcp_configs?: Record<string, unknown>;
-  /** Champ de l'outil apm : cible → serveurs MCP écrits pour elle. Il y lit la propriété des entrées. */
+  /** Field of the apm tool: target → MCP servers written for it. apm reads the ownership of entries from it. */
   mcp_target_servers?: Record<string, string[]>;
   local_deployed_files?: string[];
   local_deployed_file_hashes?: Record<string, string>;
@@ -128,7 +128,7 @@ const ENTRY_ORDER = [
 
 const HASH_FIELDS = ['tree_sha256', 'content_hash', 'resolved_hash'];
 
-/** Clé d'identité d'une entrée : dépôt + sous-chemin, ou chemin local. */
+/** Identity key of an entry: repository + subpath, or local path. */
 export function entryIdentity(entry: LockEntry): string {
   if (entry.source === 'local') return `local:${entry.local_path}`;
   const repo = canonicalRepoUrl(entry);
@@ -136,8 +136,8 @@ export function entryIdentity(entry: LockEntry): string {
 }
 
 /**
- * Identité `hôte/propriétaire/dépôt` d'une entrée. L'outil apm écrit l'hôte à part
- * (`repo_url: propriétaire/dépôt`, `host: github.com`) : les deux formes sont lues.
+ * `host/owner/repo` identity of an entry. The apm tool writes the host separately
+ * (`repo_url: owner/repo`, `host: github.com`): both forms are read.
  */
 export function canonicalRepoUrl(entry: LockEntry): string {
   const repo = String(entry.repo_url);
@@ -162,7 +162,7 @@ export function parseLockfile(text: string, file = LOCK_FILE): Lockfile {
   const lock = data as Lockfile;
   const version = String(lock.lockfile_version ?? '');
   if (!KNOWN_VERSIONS.includes(version)) {
-    // req-lk-004 : refuser, en proposant les deux issues.
+    // req-lk-004: refuse, offering the two ways out.
     invalid(
       file,
       t(
@@ -198,7 +198,7 @@ function ordered(obj: Record<string, unknown>, order: string[]): Record<string, 
     (Array.isArray(v) && v.length === 0) ||
     (typeof v === 'object' && !Array.isArray(v) && Object.keys(v as object).length === 0);
   for (const k of order) if (!isUnset(obj[k])) out[k] = obj[k];
-  // Champs inconnus et extensions `x-*` conservés (req-lk-011, req-lk-014), dans un ordre stable.
+  // Unknown fields and `x-*` extensions kept (req-lk-011, req-lk-014), in a stable order.
   for (const k of Object.keys(obj).sort()) {
     if (!(k in out) && !order.includes(k) && !isUnset(obj[k])) out[k] = obj[k];
   }
@@ -206,8 +206,8 @@ function ordered(obj: Record<string, unknown>, order: string[]): Record<string, 
 }
 
 /**
- * Sérialise le lockfile : champs non définis omis, entrées triées par
- * (`repo_url`, `virtual_path`), version jamais rétrogradée (req-lk-002).
+ * Serialises the lockfile: undefined fields omitted, entries sorted by
+ * (`repo_url`, `virtual_path`), version never downgraded (req-lk-002).
  */
 export function serializeLockfile(lock: Lockfile, previous?: Lockfile): string {
   const version =
@@ -234,7 +234,7 @@ export function serializeLockfile(lock: Lockfile, previous?: Lockfile): string {
     });
   const top: Record<string, unknown> = { ...lock, lockfile_version: version, dependencies: deps };
   const out = ordered(top, TOP_ORDER);
-  // `dependencies` est requis même vide (req-lk-001).
+  // `dependencies` is required even when empty (req-lk-001).
   if (!('dependencies' in out)) {
     return stringifyYaml({ lockfile_version: version, dependencies: [], ...out });
   }

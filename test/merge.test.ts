@@ -22,14 +22,14 @@ const hook: MergedEntryRecord = {
 };
 
 describe('fusion JSON', () => {
-  it('crée le document quand il n’existe pas', () => {
+  it('creates the document when it does not exist', () => {
     const r = mergeJson(undefined, [server]);
     expect(JSON.parse(r.text)).toEqual({ mcpServers: { demo: server.value } });
     expect(r.owned).toEqual([server]);
     expect(r.conflicts).toEqual([]);
   });
 
-  it('préserve le contenu et les commentaires existants', () => {
+  it('preserves existing content and comments', () => {
     const existing =
       '{\n  // serveurs de l’équipe\n  "mcpServers": {\n    "autre": { "command": "x" }\n  },\n  "theme": "dark"\n}\n';
     const r = mergeJson(existing, [server]);
@@ -37,13 +37,13 @@ describe('fusion JSON', () => {
     expect(r.text).toContain('"theme": "dark"');
     expect(r.text).toContain('"autre"');
     expect(r.text).toContain('"demo"');
-    // Commentaires et contenu sont conservés ; l'indentation voisine de l'édition peut être normalisée.
+    // Comments and content are kept; the indentation next to the edit may be normalised.
     const back = unmergeJson(r.text, r.owned);
     expect(back.text).toContain('// serveurs de l’équipe');
     expect(parseJsonc(back.text)).toEqual(parseJsonc(existing));
   });
 
-  it('n’écrase jamais une clé existante de valeur différente', () => {
+  it('never overwrites an existing key with a different value', () => {
     const existing = '{"mcpServers":{"demo":{"command":"autre"}}}';
     const r = mergeJson(existing, [server]);
     expect(r.conflicts).toHaveLength(1);
@@ -52,13 +52,13 @@ describe('fusion JSON', () => {
     expect(JSON.parse(r.text).mcpServers.demo.command).toBe('autre');
   });
 
-  it('adopte une valeur identique déjà présente', () => {
+  it('adopts an identical value already present', () => {
     const r = mergeJson(JSON.stringify({ mcpServers: { demo: server.value } }), [server]);
     expect(r.conflicts).toEqual([]);
     expect(r.owned).toEqual([server]);
   });
 
-  it('ajoute aux listes sans doublon et retire seulement son élément', () => {
+  it('adds to lists without duplicates and removes only its own item', () => {
     const existing = JSON.stringify(
       { hooks: { PreToolUse: [{ hooks: [{ type: 'command', command: 'echo perso' }] }] } },
       null,
@@ -73,13 +73,13 @@ describe('fusion JSON', () => {
     ]);
   });
 
-  it('élague les conteneurs devenus vides au retrait', () => {
+  it('prunes containers that became empty on removal', () => {
     const r = mergeJson(undefined, [server, hook]);
     const back = unmergeJson(r.text, r.owned);
     expect(JSON.parse(back.text)).toEqual({});
   });
 
-  it('laisse en place une entrée modifiée à la main', () => {
+  it('leaves in place an entry edited by hand', () => {
     const r = mergeJson(undefined, [server]);
     const edited = r.text.replace('"npx"', '"node"');
     const back = unmergeJson(edited, r.owned);
@@ -87,7 +87,7 @@ describe('fusion JSON', () => {
     expect(JSON.parse(back.text).mcpServers.demo.command).toBe('node');
   });
 
-  it('pose les clés « ensure » sans les retirer', () => {
+  it('sets "ensure" keys without removing them', () => {
     const ensure: MergedEntryRecord = { type: 'ensure', keyPath: ['version'], value: 1 };
     const r = mergeJson(undefined, [ensure, hook]);
     expect(JSON.parse(r.text).version).toBe(1);
@@ -104,14 +104,14 @@ describe('fusion JSON', () => {
   });
 });
 
-describe('fusion TOML (bloc délimité)', () => {
+describe('TOML merge (delimited block)', () => {
   const entry: MergedEntryRecord = {
     type: 'block',
     keyPath: ['mcp_servers', 'demo'],
     value: { command: 'npx', args: ['-y', 'demo'], env: { A: '1' } },
   };
 
-  it('ajoute un bloc sans réécrire le reste du fichier', () => {
+  it('adds a block without rewriting the rest of the file', () => {
     const existing = '# ma config\nmodel = "gpt-5"\n\n[mcp_servers.autre]\ncommand = "x"\n';
     const r = mergeToml(existing, 'github.com/acme/demo', [entry], []);
     expect(r.text.startsWith(existing.trimEnd())).toBe(true);
@@ -123,13 +123,13 @@ describe('fusion TOML (bloc délimité)', () => {
     expect(back.text).toBe(existing);
   });
 
-  it('refuse d’écraser une table existante hors bloc', () => {
+  it('refuses to overwrite an existing table outside the block', () => {
     const r = mergeToml('[mcp_servers.demo]\ncommand = "autre"\n', 'id', [entry], []);
     expect(r.conflicts[0]!.reason).toBe('foreign');
     expect(r.owned).toEqual([]);
   });
 
-  it('remplace son propre bloc à la mise à jour', () => {
+  it('replaces its own block on update', () => {
     const first = mergeToml(undefined, 'id', [entry], []);
     const next: MergedEntryRecord = { ...entry, value: { command: 'node', args: [] } };
     const second = mergeToml(first.text, 'id', [next], first.owned);
@@ -137,14 +137,14 @@ describe('fusion TOML (bloc délimité)', () => {
     expect(second.text.match(/>>> ahub/g)).toHaveLength(1);
   });
 
-  it('détecte un bloc modifié à la main', () => {
+  it('detects a block edited by hand', () => {
     const first = mergeToml(undefined, 'id', [entry], []);
     const edited = first.text.replace('"npx"', '"node"');
     expect(mergeToml(edited, 'id', [entry], first.owned).conflicts[0]!.reason).toBe('modified');
     expect(unmergeToml(edited, 'id', first.owned).kept).toHaveLength(1);
   });
 
-  it('supprime tout quand le fichier ne contenait que le bloc', () => {
+  it('deletes everything when the file only contained the block', () => {
     const first = mergeToml(undefined, 'id', [entry], []);
     expect(unmergeToml(first.text, 'id', first.owned).text).toBe('');
   });
