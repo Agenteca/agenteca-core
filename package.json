@@ -3,15 +3,51 @@
   "version": "0.1.0",
   "description": "Agenteca library: OpenAPM manifest and lockfile, version resolution, per-tool adapters, security scan, marketplaces.",
   "license": "Apache-2.0",
+  "author": "Agenteca <agenteca@proton.me>",
+  "homepage": "https://github.com/agenteca/agenteca-core#readme",
+  "bugs": {
+    "url": "https://github.com/agenteca/agenteca-core/issues"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "ai-agents",
+    "openapm",
+    "apm",
+    "agent-skills",
+    "mcp",
+    "claude-code",
+    "codex",
+    "github-copilot",
+    "cursor",
+    "package-manager"
+  ],
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   },
-  "files": ["dist", "vendor", "CONFORMANCE.md", "CHANGELOG.md", "NOTICE"],
-  "repository": { "type": "git", "url": "git+https://github.com/agenteca/agenteca-core.git" },
+  "files": [
+    "dist",
+    "vendor",
+    "CONFORMANCE.md",
+    "CHANGELOG.md",
+    "NOTICE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agenteca/agenteca-core.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
