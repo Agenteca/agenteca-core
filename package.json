@@ -1,7 +1,7 @@
 {
   "name": "@agenteca/core",
   "version": "0.1.0",
-  "description": "Bibliothèque Agenteca : manifeste et lockfile OpenAPM, résolution de versions, adaptateurs par outil, scan de sécurité, marketplaces.",
+  "description": "Agenteca library: OpenAPM manifest and lockfile, version resolution, per-tool adapters, security scan, marketplaces.",
   "license": "Apache-2.0",
   "type": "module",
   "engines": { "node": ">=22" },
