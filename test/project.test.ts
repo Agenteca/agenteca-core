@@ -225,7 +225,7 @@ describe('cycle de vie complet', () => {
       {
         path: '.claude/agents/reviewer.md',
         reason: 'modified',
-        message: expect.stringContaining('modifié à la main'),
+        message: expect.stringContaining('edited by hand'),
       },
     ]);
     await expect(applyInstall(prepared)).rejects.toMatchObject({ code: 'FILE_MODIFIED' });
@@ -408,7 +408,7 @@ describe('cycle de vie complet', () => {
     // req-mf-022 : un sous-ensemble insatisfait est une erreur, pas un retrait.
     await expect(
       prepareInstall(ctx, { add: [{ ...dep('acme/mono/packages/many'), skills: ['absent'] }] }),
-    ).rejects.toThrowError(/aucun des skills demandés/);
+    ).rejects.toThrowError(/none of the requested skills/);
   });
 
   it('exige une cible, et la détecte à défaut d’option', async () => {

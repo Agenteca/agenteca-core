@@ -11,6 +11,7 @@ import {
   unparsedFrontmatterDiagnostic,
 } from './common.js';
 import type { Adapter } from './types.js';
+import { t } from '../i18n.js';
 
 /**
  * OpenAI Codex. Agents en TOML dans `.codex/agents/`, skills dans
@@ -47,7 +48,7 @@ export const codexAdapter: Adapter = (content, ctx) => {
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(p.name)) {
       r.diagnostics.push({
         code: 'COMMAND_NAME_UNSUPPORTED',
-        message: `commande « ${p.name} » → codex : nom incompatible avec un skill, ignorée`,
+        message: t('command "{0}" → codex: name is not valid for a skill, skipped', [p.name]),
         path: p.sourcePath,
       });
       continue;
@@ -55,7 +56,9 @@ export const codexAdapter: Adapter = (content, ctx) => {
     if (skills.some((s) => s.name === p.name)) {
       r.diagnostics.push({
         code: 'COMMAND_SHADOWED',
-        message: `commande « ${p.name} » → codex : un skill du même nom existe déjà, commande ignorée`,
+        message: t('command "{0}" → codex: a skill with the same name already exists, command skipped', [
+          p.name,
+        ]),
         path: p.sourcePath,
       });
       continue;
@@ -73,7 +76,10 @@ export const codexAdapter: Adapter = (content, ctx) => {
   for (const i of content.instructions) {
     r.diagnostics.push({
       code: 'INSTRUCTION_UNSUPPORTED',
-      message: `instruction « ${i.name} » → codex : Codex ne lit pas d’instructions par fichier (seulement AGENTS.md) ; non déployée.`,
+      message: t(
+        'instruction "{0}" → codex: Codex does not read per-file instructions (only AGENTS.md); not deployed.',
+        [i.name],
+      ),
       path: i.sourcePath,
     });
   }
@@ -117,7 +123,10 @@ export const codexAdapter: Adapter = (content, ctx) => {
           if (v.includes('${')) {
             r.diagnostics.push({
               code: 'MCP_VAR_UNSUPPORTED',
-              message: `serveur MCP « ${m.name} » → codex : la variable de « ${k} » n’est pas développée par Codex, valeur transmise telle quelle.`,
+              message: t(
+                'MCP server "{0}" → codex: the variable in "{1}" is not expanded by Codex, value passed as is.',
+                [m.name, k],
+              ),
             });
           }
           env[k] = v;
@@ -128,7 +137,9 @@ export const codexAdapter: Adapter = (content, ctx) => {
     } else if (m.transport === 'sse') {
       r.diagnostics.push({
         code: 'MCP_TRANSPORT_UNSUPPORTED',
-        message: `serveur MCP « ${m.name} » → codex : le transport SSE n’est pas pris en charge par Codex, serveur ignoré.`,
+        message: t('MCP server "{0}" → codex: the SSE transport is not supported by Codex, server skipped.', [
+          m.name,
+        ]),
       });
       continue;
     } else {

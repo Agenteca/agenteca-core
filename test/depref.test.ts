@@ -56,7 +56,7 @@ describe('références de dépendance (spec §4.3)', () => {
 
   it('rejette les chaînes hors grammaire', () => {
     for (const bad of ['', 'justone', 'a//b', 'a/b/../c', 'ftp://h/o/r', 'a/b#']) {
-      expect(() => parseDepString(bad), bad).toThrowError(/dépendance invalide/);
+      expect(() => parseDepString(bad), bad).toThrowError(/invalid dependency/);
     }
   });
 
@@ -76,8 +76,8 @@ describe('références de dépendance (spec §4.3)', () => {
       skills: ['x'],
     });
     expect(r).toMatchObject({ virtualPath: 'packages/a', ref: '^1.0.0', alias: 'a', skills: ['x'] });
-    expect(() => parseDepEntry({ git: 'a/b', id: 'a/b' })).toThrowError(/mutuellement exclusifs/);
-    expect(() => parseDepEntry({ git: 'a/b', alias: '..' })).toThrowError(/alias invalide/);
+    expect(() => parseDepEntry({ git: 'a/b', id: 'a/b' })).toThrowError(/mutually exclusive/);
+    expect(() => parseDepEntry({ git: 'a/b', alias: '..' })).toThrowError(/invalid alias/);
   });
 
   it('classe les fichiers virtuels par extension seulement (req-mf-008)', () => {

@@ -1,5 +1,6 @@
 import { type Document, isAlias, isNode, parseDocument, stringify, visit } from 'yaml';
 import { AhubError, type ErrorCode } from './errors.js';
+import { t } from './i18n.js';
 
 const STD_TAG_PREFIX = 'tag:yaml.org,2002:';
 
@@ -21,25 +22,25 @@ export function parseYamlDocument(
     prettyErrors: true,
   });
   if (doc.errors.length > 0) {
-    throw new AhubError(code, `${file} : YAML invalide — ${doc.errors[0]!.message}`, { file });
+    throw new AhubError(code, t('{0}: invalid YAML — {1}', [file, doc.errors[0]!.message]), { file });
   }
   for (const w of doc.warnings) {
     if (/tag/i.test(w.message)) {
-      throw new AhubError(code, `${file} : tag YAML personnalisé refusé — ${w.message}`, { file });
+      throw new AhubError(code, t('{0}: custom YAML tag refused — {1}', [file, w.message]), { file });
     }
   }
   visit(doc, {
     Alias() {
-      throw new AhubError(code, `${file} : les alias YAML (*alias) sont refusés`, { file });
+      throw new AhubError(code, t('{0}: YAML aliases (*alias) are refused', [file]), { file });
     },
     Node(_key, node) {
       if (isAlias(node)) return;
       if (isNode(node)) {
         if (node.anchor) {
-          throw new AhubError(code, `${file} : les ancres YAML (&${node.anchor}) sont refusées`, { file });
+          throw new AhubError(code, t('{0}: YAML anchors (&{1}) are refused', [file, node.anchor]), { file });
         }
         if (node.tag && !node.tag.startsWith(STD_TAG_PREFIX) && node.tag !== '!' && node.tag !== '?') {
-          throw new AhubError(code, `${file} : tag YAML personnalisé refusé (${node.tag})`, { file });
+          throw new AhubError(code, t('{0}: custom YAML tag refused ({1})', [file, node.tag]), { file });
         }
       }
     },
@@ -69,7 +70,7 @@ export function splitFrontmatter(
     const data = parseYamlSafe(m[1]!, file, 'PACKAGE_INVALID');
     if (data === null || data === undefined) return { frontmatter: {}, body };
     if (typeof data !== 'object' || Array.isArray(data)) {
-      return { frontmatter: null, body, error: 'le frontmatter n’est pas un dictionnaire' };
+      return { frontmatter: null, body, error: t('the front matter is not a mapping') };
     }
     return { frontmatter: data as Record<string, unknown>, body };
   } catch (e) {

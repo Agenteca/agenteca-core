@@ -15,6 +15,7 @@ import {
   parseMarketplace,
 } from './marketplace.js';
 import { repoLocation, resolveLocalPath } from './resolver.js';
+import { t } from './i18n.js';
 
 export interface RegistryContext {
   git: GitOptions;
@@ -59,13 +60,13 @@ async function catalogFromDir(
     try {
       json = JSON.parse(await readFile(file, 'utf8'));
     } catch {
-      throw new AhubError('REGISTRY_FAILED', `registre « ${name} » : ${rel} n’est pas un JSON valide`);
+      throw new AhubError('REGISTRY_FAILED', t('registry "{0}": {1} is not valid JSON', [name, rel]));
     }
     return parseMarketplace(json, ctx);
   }
   throw new AhubError(
     'REGISTRY_FAILED',
-    `registre « ${name} » : aucun catalogue trouvé (apm.yml avec « marketplace: » ou marketplace.json)`,
+    t('registry "{0}": no catalog found (apm.yml with "marketplace:" or marketplace.json)', [name]),
   );
 }
 
@@ -77,16 +78,19 @@ export async function loadCatalog(
   if (reg.kind === 'path') {
     const dir = resolveLocalPath(reg.url, ctx.cwd, ctx.home);
     if (!existsSync(dir))
-      throw new AhubError('REGISTRY_FAILED', `registre « ${reg.name} » : dossier introuvable (${reg.url})`);
+      throw new AhubError(
+        'REGISTRY_FAILED',
+        t('registry "{0}": folder not found ({1})', [reg.name, reg.url]),
+      );
     return catalogFromDir(dir, reg.name, { baseDir: dir });
   }
   if (reg.kind === 'git') {
     const ref = parseDepString(reg.url);
     if (ref.kind !== 'git')
-      throw new AhubError('REGISTRY_FAILED', `registre « ${reg.name} » : URL git invalide`);
+      throw new AhubError('REGISTRY_FAILED', t('registry "{0}": invalid git URL', [reg.name]));
     const gitDir = await ensureMirror(repoLocation(ref, ctx.git), ctx.git, true);
     const commit = await revParse(gitDir, ref.ref ?? 'HEAD');
-    if (!commit) throw new AhubError('REGISTRY_FAILED', `registre « ${reg.name} » : référence introuvable`);
+    if (!commit) throw new AhubError('REGISTRY_FAILED', t('registry "{0}": reference not found', [reg.name]));
     const work = await mkdtemp(path.join(os.tmpdir(), 'ahub-registry-'));
     try {
       await materialize(gitDir, commit, work);
@@ -111,11 +115,11 @@ export async function loadCatalog(
     } catch (e) {
       throw new AhubError(
         'REGISTRY_FAILED',
-        `registre « ${reg.name} » injoignable : ${e instanceof Error ? e.message : String(e)}`,
+        t('registry "{0}" unreachable: {1}', [reg.name, e instanceof Error ? e.message : String(e)]),
       );
     }
     if (!res.ok)
-      throw new AhubError('REGISTRY_FAILED', `registre « ${reg.name} » : réponse HTTP ${res.status}`);
+      throw new AhubError('REGISTRY_FAILED', t('registry "{0}": HTTP response {1}', [reg.name, res.status]));
     const body = (await res.json()) as { items?: Array<Record<string, unknown>>; total?: number };
     for (const it of body.items ?? []) {
       if (typeof it.name !== 'string' || typeof it.source !== 'string') continue;
@@ -157,7 +161,7 @@ export async function searchRegistries(
 ): Promise<SearchResult> {
   const selected = opts.registry ? registries.filter((r) => r.name === opts.registry) : registries;
   if (opts.registry && selected.length === 0)
-    throw new AhubError('NOT_FOUND', `registre « ${opts.registry} » inconnu`);
+    throw new AhubError('NOT_FOUND', t('unknown registry "{0}"', [opts.registry]));
   const result: SearchResult = { entries: [], failures: [] };
   for (const reg of selected) {
     try {

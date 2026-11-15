@@ -1,5 +1,6 @@
 import { isUtf8 } from 'node:buffer';
 import { sha256Hex } from './hash.js';
+import { msg, t } from './i18n.js';
 
 export type Severity = 'critical' | 'warning' | 'info';
 
@@ -35,97 +36,100 @@ export const RULES: ScanRule[] = [
     id: 'AHUB-U001',
     name: 'unicode-tags',
     severity: 'critical',
-    description: 'Caractères du bloc Unicode « Tags » (U+E0000–E007F), invisibles et lisibles par un modèle.',
-    help: 'Supprimez ces caractères : ils servent à cacher des instructions (« ASCII smuggling »).',
+    description: msg(
+      'Characters from the Unicode "Tags" block (U+E0000–E007F), invisible to people and readable by a model.',
+    ),
+    help: msg('Remove these characters: they are used to hide instructions ("ASCII smuggling").'),
   },
   {
     id: 'AHUB-U002',
     name: 'bidi-control',
     severity: 'critical',
-    description: 'Contrôles bidirectionnels (U+202A–202E, U+2066–2069) qui réordonnent le texte affiché.',
-    help: 'Supprimez ces caractères : le texte lu par le modèle diffère de celui affiché (« Trojan Source »).',
+    description: msg('Bidirectional controls (U+202A–202E, U+2066–2069) that reorder the displayed text.'),
+    help: msg(
+      'Remove these characters: the text the model reads differs from the text displayed ("Trojan Source").',
+    ),
   },
   {
     id: 'AHUB-U003',
     name: 'variation-selector-supplement',
     severity: 'critical',
-    description:
-      'Sélecteurs de variation supplémentaires (U+E0100–E01EF), utilisables pour encoder des données cachées.',
-    help: 'Supprimez ces caractères.',
+    description: msg('Supplementary variation selectors (U+E0100–E01EF), which can encode hidden data.'),
+    help: msg('Remove these characters.'),
   },
   {
     id: 'AHUB-U004',
     name: 'invalid-encoding',
     severity: 'critical',
-    description: 'Fichier texte dont l’encodage UTF-8 est invalide (substituts isolés, séquences tronquées).',
-    help: 'Réenregistrez le fichier en UTF-8 valide.',
+    description: msg('Text file whose UTF-8 encoding is invalid (lone surrogates, truncated sequences).'),
+    help: msg('Save the file again as valid UTF-8.'),
   },
   {
     id: 'AHUB-U005',
     name: 'zero-width',
     severity: 'warning',
-    description:
-      'Caractères invisibles (largeur nulle, marques bidi, opérateurs invisibles, trait d’union conditionnel, BOM en milieu de fichier).',
-    help: 'Vérifiez qu’ils sont légitimes (par exemple dans un texte en arabe ou en hindi), sinon supprimez-les.',
+    description: msg(
+      'Invisible characters (zero width, bidi marks, invisible operators, soft hyphen, BOM in the middle of a file).',
+    ),
+    help: msg('Check that they are legitimate (for example in Arabic or Hindi text); otherwise remove them.'),
   },
   {
     id: 'AHUB-U006',
     name: 'unusual-whitespace',
     severity: 'info',
-    description: 'Espaces inhabituelles (insécable, cadratin, idéographique, séparateurs de ligne).',
-    help: 'Sans danger en général ; à vérifier dans une commande ou un nom.',
+    description: msg('Unusual whitespace (no-break, em, ideographic, line separators).'),
+    help: msg('Usually harmless; check it when it appears in a command or a name.'),
   },
   {
     id: 'AHUB-U007',
     name: 'mixed-script-confusable',
     severity: 'warning',
-    description:
-      'Mot mêlant lettres latines et lettres cyrilliques ou grecques d’apparence identique (homoglyphes).',
-    help: 'Vérifiez le mot : il peut imiter un nom de commande, de fichier ou de domaine.',
+    description: msg('Word mixing Latin letters with look-alike Cyrillic or Greek letters (homoglyphs).'),
+    help: msg('Check the word: it may imitate the name of a command, a file or a domain.'),
   },
   {
     id: 'AHUB-P001',
     name: 'pipe-to-shell',
     severity: 'critical',
-    description: 'Téléchargement exécuté directement par un interpréteur (curl … | sh).',
-    help: 'Un paquet d’agents ne doit pas faire exécuter du code téléchargé. Refusez ou examinez l’URL.',
+    description: msg('Download executed directly by an interpreter (curl … | sh).'),
+    help: msg('An agent package must not make anyone run downloaded code. Refuse it, or examine the URL.'),
   },
   {
     id: 'AHUB-P002',
     name: 'encoded-execution',
     severity: 'critical',
-    description: 'Contenu encodé puis exécuté (base64 -d | sh, eval(atob(…))).',
-    help: 'Décodez et lisez le contenu avant toute installation.',
+    description: msg('Content that is encoded and then executed (base64 -d | sh, eval(atob(…))).'),
+    help: msg('Decode and read the content before installing anything.'),
   },
   {
     id: 'AHUB-P003',
     name: 'instruction-override',
     severity: 'warning',
-    description:
-      'Formulation demandant d’ignorer les instructions précédentes ou de cacher une action à l’utilisateur.',
-    help: 'Relisez le passage : c’est la forme typique d’une injection de consignes.',
+    description: msg('Wording that asks to ignore earlier instructions or to hide an action from the user.'),
+    help: msg('Read the passage again: this is the typical shape of a prompt injection.'),
   },
   {
     id: 'AHUB-P004',
     name: 'credential-access',
     severity: 'warning',
-    description: 'Référence à des secrets locaux (clés SSH, identifiants cloud, fichiers .env, jetons).',
-    help: 'Vérifiez que l’agent a une raison légitime de lire ces fichiers.',
+    description: msg('Reference to local secrets (SSH keys, cloud credentials, .env files, tokens).'),
+    help: msg('Check that the agent has a legitimate reason to read these files.'),
   },
   {
     id: 'AHUB-P005',
     name: 'hidden-comment-instruction',
     severity: 'warning',
-    description: 'Commentaire HTML (invisible au rendu Markdown) contenant des consignes.',
-    help: 'Lisez le commentaire : le modèle le voit, pas le lecteur.',
+    description: msg('HTML comment (invisible in rendered Markdown) containing instructions.'),
+    help: msg('Read the comment: the model sees it, the reader does not.'),
   },
   {
     id: 'AHUB-P006',
     name: 'exfiltration',
     severity: 'warning',
-    description:
-      'Envoi de données vers l’extérieur (requête sortante avec contenu de fichier ou de variable d’environnement, URL vers une adresse IP).',
-    help: 'Vérifiez la destination et les données envoyées.',
+    description: msg(
+      'Data sent to the outside (outgoing request carrying a file or an environment variable, URL to an IP address).',
+    ),
+    help: msg('Check the destination and the data being sent.'),
   },
 ];
 
@@ -235,12 +239,7 @@ export function scanFile(input: ScanInput): Finding[] {
   };
 
   if (!isUtf8(bytes)) {
-    push(
-      'AHUB-U004',
-      1,
-      1,
-      'Encodage UTF-8 invalide : le contenu réellement lu par un modèle est imprévisible.',
-    );
+    push('AHUB-U004', 1, 1, t('Invalid UTF-8 encoding: what a model actually reads is unpredictable.'));
   }
   const textContent = bytes.toString('utf8');
   const lines = textContent.split(/\r\n|\n|\r/);
@@ -262,7 +261,13 @@ export function scanFile(input: ScanInput): Finding[] {
           ruleId,
           i + 1,
           col,
-          `${RULE.get(ruleId)!.description} Premier caractère : ${hex(cp)}${count > 1 ? ` (${count} sur la ligne)` : ''}.`,
+          count > 1
+            ? t('{0} First character: {1} ({2} on the line).', [
+                t(RULE.get(ruleId)!.description),
+                hex(cp),
+                count,
+              ])
+            : t('{0} First character: {1}.', [t(RULE.get(ruleId)!.description), hex(cp)]),
         );
       }
     }
@@ -274,7 +279,7 @@ export function scanFile(input: ScanInput): Finding[] {
             'AHUB-U007',
             i + 1,
             (m.index ?? 0) + 1,
-            `Le mot « ${word} » mélange des lettres latines et des homoglyphes cyrilliques ou grecs.`,
+            t('The word "{0}" mixes Latin letters with Cyrillic or Greek homoglyphs.', [word]),
           );
           break;
         }
@@ -286,7 +291,12 @@ export function scanFile(input: ScanInput): Finding[] {
       const m = p.re.exec(line);
       if (m) {
         matched.add(p.id);
-        push(p.id, i + 1, m.index + 1, `${RULE.get(p.id)!.description} Extrait : « ${m[0].slice(0, 120)} »`);
+        push(
+          p.id,
+          i + 1,
+          m.index + 1,
+          t('{0} Excerpt: "{1}"', [t(RULE.get(p.id)!.description), m[0].slice(0, 120)]),
+        );
       }
     }
   }
@@ -300,7 +310,7 @@ export function scanFile(input: ScanInput): Finding[] {
           'AHUB-P005',
           line,
           1,
-          `Commentaire HTML contenant des consignes : « ${body.trim().replace(/\s+/g, ' ').slice(0, 120)} »`,
+          t('HTML comment containing instructions: "{0}"', [body.trim().replace(/\s+/g, ' ').slice(0, 120)]),
         );
       }
     }
@@ -344,9 +354,9 @@ export function toSarif(findings: Finding[], toolVersion: string): Record<string
             rules: RULES.map((r) => ({
               id: r.id,
               name: r.name,
-              shortDescription: { text: r.description },
-              fullDescription: { text: r.description },
-              help: { text: r.help },
+              shortDescription: { text: t(r.description) },
+              fullDescription: { text: t(r.description) },
+              help: { text: t(r.help) },
               defaultConfiguration: { level: SARIF_LEVEL[r.severity] },
               properties: { tags: ['security'], 'security-severity': SECURITY_SEVERITY[r.severity] },
             })),

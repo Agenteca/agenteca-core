@@ -123,7 +123,7 @@ describe('lecture du paquet', () => {
   it('refuse un dossier sans disposition reconnue', async () => {
     const dir = await tmpDir();
     await writeTree(dir, { 'README.md': 'rien' });
-    await expect(readPackage(dir, 'x')).rejects.toThrowError(/aucune disposition/);
+    await expect(readPackage(dir, 'x')).rejects.toThrowError(/no recognised package layout/);
   });
 });
 
@@ -372,12 +372,10 @@ describe('déploiement multi-cibles', () => {
       files: [{ path: p, bytes: Buffer.from('x'), primitive: 'skill', target: 'claude' }],
       merges: [],
     });
-    await expect(prepareDeploy(root, [bad('../evil.md')], [])).rejects.toThrowError(/refusé/);
-    await expect(prepareDeploy(root, [bad('/etc/evil')], [])).rejects.toThrowError(/refusé/);
+    await expect(prepareDeploy(root, [bad('../evil.md')], [])).rejects.toThrowError(/refused/);
+    await expect(prepareDeploy(root, [bad('/etc/evil')], [])).rejects.toThrowError(/refused/);
     await symlink(outside, path.join(root, '.claude'));
-    await expect(prepareDeploy(root, [bad('.claude/agents/x.md')], [])).rejects.toThrowError(
-      /lien symbolique/,
-    );
+    await expect(prepareDeploy(root, [bad('.claude/agents/x.md')], [])).rejects.toThrowError(/symbolic link/);
   });
 
   it('détecte les outils présents dans un projet', async () => {

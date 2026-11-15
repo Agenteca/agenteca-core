@@ -1,4 +1,5 @@
 import { AhubError } from './errors.js';
+import { t } from './i18n.js';
 
 export const IMPLEMENTATION_DEFAULT_HOST = 'github.com';
 
@@ -38,7 +39,7 @@ export function isLocalPathString(s: string): boolean {
 }
 
 function bad(entry: string, why: string): never {
-  throw new AhubError('MANIFEST_INVALID', `dépendance invalide « ${entry} » : ${why}`, { entry });
+  throw new AhubError('MANIFEST_INVALID', t('invalid dependency "{0}": {1}', [entry, why]), { entry });
 }
 
 function stripGitSuffix(repo: string): string {
@@ -53,21 +54,21 @@ function finishGit(
   segments: string[],
   ref: string | undefined,
 ): DepRef {
-  if (!HOST_RE.test(host)) bad(entry, `hôte invalide « ${host} »`);
-  if (segments.length < 2) bad(entry, 'il faut au moins propriétaire/dépôt');
+  if (!HOST_RE.test(host)) bad(entry, t('invalid host "{0}"', [host]));
+  if (segments.length < 2) bad(entry, t('at least owner/repo is required'));
   const owner = segments[0]!;
   const repo = stripGitSuffix(segments[1]!);
-  if (!OWNER_RE.test(owner)) bad(entry, `propriétaire invalide « ${owner} »`);
-  if (!repo || !REPO_RE.test(repo)) bad(entry, `dépôt invalide « ${segments[1]} »`);
+  if (!OWNER_RE.test(owner)) bad(entry, t('invalid owner "{0}"', [owner]));
+  if (!repo || !REPO_RE.test(repo)) bad(entry, t('invalid repository "{0}"', [segments[1]]));
   const virtual = segments.slice(2);
   for (const seg of virtual) {
     if (!SEGMENT_RE.test(seg) || seg === '.' || seg === '..')
-      bad(entry, `segment de chemin invalide « ${seg} »`);
+      bad(entry, t('invalid path segment "{0}"', [seg]));
   }
   if (ref !== undefined && (ref.length === 0 || /[^\x21-\x7e]/.test(ref)))
-    bad(entry, 'référence (#ref) invalide');
+    bad(entry, t('invalid reference (#ref)'));
   if (port !== undefined && (!Number.isInteger(port) || port < 1 || port > 65535))
-    bad(entry, 'port hors 1-65535');
+    bad(entry, t('port outside 1-65535'));
   const h = host.toLowerCase();
   const out: DepRef = { kind: 'git', form, host: h, owner, repo, repoUrl: `${h}/${owner}/${repo}` };
   if (port !== undefined) out.port = port;
@@ -79,10 +80,10 @@ function finishGit(
 /** Analyse la forme chaîne d'une dépendance (ABNF de la spec §4.3.1, req-mf-007). */
 export function parseDepString(input: string, defaultHost = IMPLEMENTATION_DEFAULT_HOST): DepRef {
   const entry = input.trim();
-  if (!entry) bad(input, 'chaîne vide');
+  if (!entry) bad(input, t('empty string'));
 
   if (isLocalPathString(entry)) {
-    if (!LOCAL_TAIL_RE.test(entry)) bad(entry, 'caractères non permis dans un chemin local');
+    if (!LOCAL_TAIL_RE.test(entry)) bad(entry, t('characters not allowed in a local path'));
     return { kind: 'local', localPath: entry.replace(/\\/g, '/') };
   }
 
@@ -101,10 +102,10 @@ export function parseDepString(input: string, defaultHost = IMPLEMENTATION_DEFAU
   if (scpMatch) {
     return finishGit(entry, 'scp', scpMatch[1]!, undefined, scpMatch[2]!.split('/'), ref);
   }
-  if (main.includes('://') || main.includes('@')) bad(entry, 'forme d’URL non reconnue');
+  if (main.includes('://') || main.includes('@')) bad(entry, t('unrecognised URL form'));
 
   const segments = main.split('/');
-  if (segments.some((s) => s.length === 0)) bad(entry, 'segment vide');
+  if (segments.some((s) => s.length === 0)) bad(entry, t('empty segment'));
   // Raccourci avec hôte : le premier segment est un nom de domaine (contient un point).
   if (segments.length >= 3 && segments[0]!.includes('.') && HOST_RE.test(segments[0]!)) {
     return finishGit(entry, 'shorthand', segments[0]!, undefined, segments.slice(1), ref);
@@ -116,7 +117,7 @@ function asStringList(value: unknown, entryLabel: string, field: string): string
   if (value === undefined || value === null) return undefined;
   const list = Array.isArray(value) ? value : [value];
   if (!list.every((v) => typeof v === 'string' && v.length > 0)) {
-    bad(entryLabel, `« ${field} » doit être une chaîne ou une liste de chaînes`);
+    bad(entryLabel, t('"{0}" must be a string or a list of strings', [field]));
   }
   return list as string[];
 }
@@ -125,43 +126,44 @@ function asStringList(value: unknown, entryLabel: string, field: string): string
 export function parseDepEntry(entry: unknown, defaultHost = IMPLEMENTATION_DEFAULT_HOST): DepRef {
   if (typeof entry === 'string') return parseDepString(entry, defaultHost);
   if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
-    bad(JSON.stringify(entry), 'une chaîne ou un objet est attendu');
+    bad(JSON.stringify(entry), t('a string or an object is expected'));
   }
   const o = entry as Record<string, unknown>;
   const label = JSON.stringify(o);
   if (o.git !== undefined && o.id !== undefined)
-    bad(label, '« git » et « id » sont mutuellement exclusifs (req-mf-011)');
+    bad(label, t('"git" and "id" are mutually exclusive (req-mf-011)'));
 
   let ref: DepRef;
   if (typeof o.id === 'string') {
     ref = { kind: 'registry', registryId: o.id };
   } else if (typeof o.git === 'string') {
     if (o.git === 'parent')
-      bad(label, '« git: parent » n’est valide que dans un paquet transitif (non pris en charge en v0.1)');
+      bad(label, t('"git: parent" is only valid in a transitive package (not supported in v0.1)'));
     ref = parseDepString(o.git, defaultHost);
-    if (ref.kind !== 'git') bad(label, '« git » doit désigner un dépôt');
+    if (ref.kind !== 'git') bad(label, t('"git" must point to a repository'));
     if (typeof o.path === 'string' && o.path) {
       const p = o.path.replace(/^\/+|\/+$/g, '');
       for (const seg of p.split('/')) {
-        if (!SEGMENT_RE.test(seg) || seg === '..' || seg === '.') bad(label, `chemin invalide « ${o.path} »`);
+        if (!SEGMENT_RE.test(seg) || seg === '..' || seg === '.')
+          bad(label, t('invalid path "{0}"', [o.path]));
       }
       ref.virtualPath = ref.virtualPath ? `${ref.virtualPath}/${p}` : p;
     }
     if (o.ref !== undefined) {
-      if (typeof o.ref !== 'string' || !o.ref) bad(label, '« ref » doit être une chaîne non vide');
+      if (typeof o.ref !== 'string' || !o.ref) bad(label, t('"ref" must be a non-empty string'));
       ref.ref = o.ref;
     }
   } else if (typeof o.path === 'string') {
-    if (!isLocalPathString(o.path)) bad(label, '« path » seul doit être un chemin local (./, ../, /, ~/)');
+    if (!isLocalPathString(o.path)) bad(label, t('"path" alone must be a local path (./, ../, /, ~/)'));
     ref = parseDepString(o.path, defaultHost);
   } else {
-    bad(label, 'il manque « git », « id » ou « path »');
+    bad(label, t('"git", "id" or "path" is missing'));
   }
 
   if (o.alias !== undefined) {
     const alias = typeof o.alias === 'string' ? o.alias.trim() : '';
     if (!alias || !ALIAS_RE.test(alias) || alias === '.' || alias === '..') {
-      bad(label, `alias invalide « ${String(o.alias)} » (req-mf-025)`);
+      bad(label, t('invalid alias "{0}" (req-mf-025)', [String(o.alias)]));
     }
     ref.alias = alias;
   }
@@ -205,7 +207,7 @@ export function canonicalDepString(ref: DepRef, defaultHost = IMPLEMENTATION_DEF
 
 /** URL de clonage git correspondant à la référence. */
 export function cloneUrl(ref: DepRef): string {
-  if (ref.kind !== 'git') throw new AhubError('INTERNAL', 'cloneUrl : référence non git');
+  if (ref.kind !== 'git') throw new AhubError('INTERNAL', t('cloneUrl: not a git reference'));
   const hostPort = `${ref.host}${ref.port ? `:${ref.port}` : ''}`;
   switch (ref.form) {
     case 'http':
@@ -234,14 +236,14 @@ export type CliPackageArg =
  */
 export function parseCliPackageArg(arg: string): CliPackageArg {
   const a = arg.trim();
-  if (!a) throw new AhubError('USAGE', 'nom de paquet vide');
+  if (!a) throw new AhubError('USAGE', t('empty package name'));
   if (isLocalPathString(a)) return { type: 'dep', dep: a };
   if (!a.includes('/')) {
     const at = a.indexOf('@');
     if (at === -1) return { type: 'catalog', name: a };
     const name = a.slice(0, at);
     const registry = a.slice(at + 1);
-    if (!name || !registry) throw new AhubError('USAGE', `référence de catalogue invalide « ${a} »`);
+    if (!name || !registry) throw new AhubError('USAGE', t('invalid catalog reference "{0}"', [a]));
     return { type: 'catalog', name, registry };
   }
   if (!a.includes('#')) {

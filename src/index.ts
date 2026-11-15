@@ -15,3 +15,4 @@ export * from './project.js';
 export * from './config.js';
 export * from './marketplace.js';
 export * from './registry.js';
+export * from './i18n.js';

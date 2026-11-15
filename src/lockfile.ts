@@ -1,6 +1,7 @@
 import { AhubError } from './errors.js';
 import { normalizeEnvelope } from './hash.js';
 import { parseYamlSafe, stringifyYaml } from './yaml.js';
+import { t } from './i18n.js';
 
 export const LOCK_FILE = 'apm.lock.yaml';
 export const LEGACY_LOCK_FILE = 'apm.lock';
@@ -150,13 +151,13 @@ export function emptyLockfile(): Lockfile {
 }
 
 function invalid(file: string, message: string): never {
-  throw new AhubError('LOCK_INVALID', `${file} : ${message}`, { file });
+  throw new AhubError('LOCK_INVALID', t('{0}: {1}', [file, message]), { file });
 }
 
 export function parseLockfile(text: string, file = LOCK_FILE): Lockfile {
   const data = parseYamlSafe(text, file, 'LOCK_INVALID');
   if (data === null || typeof data !== 'object' || Array.isArray(data)) {
-    invalid(file, 'le document doit être un dictionnaire YAML (req-lk-001)');
+    invalid(file, t('the document must be a YAML mapping (req-lk-001)'));
   }
   const lock = data as Lockfile;
   const version = String(lock.lockfile_version ?? '');
@@ -164,16 +165,18 @@ export function parseLockfile(text: string, file = LOCK_FILE): Lockfile {
     // req-lk-004 : refuser, en proposant les deux issues.
     invalid(
       file,
-      `version de lockfile « ${version} » non reconnue (versions gérées : ${KNOWN_VERSIONS.join(', ')}). ` +
-        'Mettez à jour ahub, ou régénérez le lockfile à partir du manifeste (supprimez-le puis « ahub install »).',
+      t(
+        'lockfile version "{0}" is not recognised (supported versions: {1}). Update ahub, or regenerate the lockfile from the manifest (delete it, then run "ahub install").',
+        [version, KNOWN_VERSIONS.join(', ')],
+      ),
     );
   }
   lock.lockfile_version = version as '1' | '2';
-  if (!Array.isArray(lock.dependencies)) invalid(file, '« dependencies » doit être une liste (req-lk-001)');
+  if (!Array.isArray(lock.dependencies)) invalid(file, t('"dependencies" must be a list (req-lk-001)'));
   for (const entry of lock.dependencies) {
-    if (entry === null || typeof entry !== 'object') invalid(file, 'entrée de dépendance invalide');
+    if (entry === null || typeof entry !== 'object') invalid(file, t('invalid dependency entry'));
     if (entry.resolved_commit !== undefined && !/^[0-9a-f]{40}$/.test(String(entry.resolved_commit))) {
-      invalid(file, `« resolved_commit » invalide pour ${entryIdentity(entry)}`);
+      invalid(file, t('invalid "resolved_commit" for {0}', [entryIdentity(entry)]));
     }
     for (const f of HASH_FIELDS) {
       if (typeof entry[f] === 'string') entry[f] = normalizeEnvelope(entry[f] as string);

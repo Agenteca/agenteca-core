@@ -16,6 +16,7 @@ import { envelope, sha256Hex } from './hash.js';
 import type { LockEntry } from './lockfile.js';
 import type { Manifest } from './manifest.js';
 import { type PackageContent, readPackage } from './package.js';
+import { t } from './i18n.js';
 
 export interface ResolveOptions {
   git: GitOptions;
@@ -121,7 +122,7 @@ export async function resolveAll(
       if (!(e instanceof Restart)) throw e;
     }
   }
-  throw new AhubError('RESOLUTION_FAILED', 'la résolution des dépendances ne converge pas');
+  throw new AhubError('RESOLUTION_FAILED', t('dependency resolution does not converge'));
 }
 
 async function resolveOnce(
@@ -160,13 +161,13 @@ async function resolveOnce(
     if (ref.kind === 'registry') {
       throw new AhubError(
         'UNSUPPORTED',
-        `dépendance de registre « ${ref.registryId} » : non prise en charge en v0.1`,
+        t('registry dependency "{0}": not supported in v0.1', [ref.registryId]),
       );
     }
     if (req.depth > maxDepth) {
       throw new AhubError(
         'RESOLUTION_FAILED',
-        `profondeur maximale (${maxDepth}) dépassée en résolvant ${depIdentity(ref)}`,
+        t('maximum depth ({0}) exceeded while resolving {1}', [maxDepth, depIdentity(ref)]),
       );
     }
 
@@ -176,7 +177,7 @@ async function resolveOnce(
       if (req.boundary && !isInside(req.boundary, abs)) {
         throw new AhubError(
           'RESOLUTION_FAILED',
-          `le chemin local « ${ref.localPath} » sort du dépôt qui le déclare`,
+          t('local path "{0}" leaves the repository that declares it', [ref.localPath]),
         );
       }
       const identity = req.boundary ? `local:${abs}` : depIdentity(ref);
@@ -223,13 +224,24 @@ async function resolveOnce(
         if ((existing.ref.ref ?? '') !== (ref.ref ?? '') && existing.depth > 1 && req.depth > 1) {
           throw new AhubError(
             'RESOLUTION_FAILED',
-            `versions incompatibles pour ${identity} : « ${existing.ref.ref ?? 'défaut'} » (via ${existing.resolvedBy}) et « ${ref.ref ?? 'défaut'} » (via ${req.by})`,
+            t('incompatible versions for {0}: "{1}" (via {2}) and "{3}" (via {4})', [
+              identity,
+              existing.ref.ref ?? t('default'),
+              existing.resolvedBy,
+              ref.ref ?? t('default'),
+              req.by,
+            ]),
           );
         }
         if ((existing.ref.ref ?? '') !== (ref.ref ?? '')) {
           diagnostics.push({
             code: 'DEPENDENCY_REF_OVERRIDDEN',
-            message: `${identity} : la référence « ${ref.ref ?? 'défaut'} » demandée par ${req.by ?? 'le manifeste'} est supplantée par « ${existing.ref.ref ?? 'défaut'} »`,
+            message: t('{0}: reference "{1}" requested by {2} is overridden by "{3}"', [
+              identity,
+              ref.ref ?? t('default'),
+              req.by ?? t('the manifest'),
+              existing.ref.ref ?? t('default'),
+            ]),
           });
         }
         continue;
@@ -240,7 +252,10 @@ async function resolveOnce(
 
     resolved.set(pkg.identity, pkg);
     diagnostics.push(
-      ...pkg.content.diagnostics.map((d) => ({ ...d, message: `${pkg.content.name} : ${d.message}` })),
+      ...pkg.content.diagnostics.map((d) => ({
+        ...d,
+        message: t('{0}: {1}', [pkg.content.name, d.message]),
+      })),
     );
     for (const child of opts.transitive === false ? [] : (pkg.content.manifest?.apm ?? [])) {
       const childReq: Request = {
@@ -298,7 +313,7 @@ async function resolveGit(
   if (opts.frozen && !lockMatches) {
     throw new AhubError(
       'LOCK_MISMATCH',
-      `installation figée : ${identity} est absent du lockfile ou ne correspond plus au manifeste`,
+      t('frozen install: {0} is missing from the lockfile or no longer matches the manifest', [identity]),
       { identity },
     );
   }
@@ -317,7 +332,10 @@ async function resolveGit(
     if (!best) {
       throw new AhubError(
         'RESOLUTION_FAILED',
-        `aucun tag de ${identity} ne satisfait ${[...(ranges ?? [ref.ref!])].map((r) => `« ${r} »`).join(' et ')}`,
+        t('no tag of {0} satisfies {1}', [
+          identity,
+          [...(ranges ?? [ref.ref!])].map((r) => `"${r}"`).join(', '),
+        ]),
         { identity, ranges: [...(ranges ?? [])] },
       );
     }
@@ -336,7 +354,7 @@ async function resolveGit(
     const refs = await remoteRefs(url);
     if (kind === 'none') {
       if (!refs.head)
-        throw new AhubError('RESOLUTION_FAILED', `${identity} : le dépôt n’a pas de branche par défaut`);
+        throw new AhubError('RESOLUTION_FAILED', t('{0}: the repository has no default branch', [identity]));
       pkg.commit = refs.head;
       if (refs.defaultBranch) pkg.resolvedRef = refs.defaultBranch;
     } else {
@@ -344,7 +362,7 @@ async function resolveGit(
       if (!commit)
         throw new AhubError(
           'RESOLUTION_FAILED',
-          `${identity} : la référence « ${ref.ref} » n’existe pas (ni tag ni branche)`,
+          t('{0}: reference "{1}" does not exist (neither a tag nor a branch)', [identity, ref.ref]),
           { identity },
         );
       pkg.commit = commit;
@@ -358,7 +376,7 @@ async function resolveGit(
     if (!(await hasCommit(gitDir, pkg.commit!))) {
       throw new AhubError(
         'RESOLUTION_FAILED',
-        `${identity} : le commit ${pkg.commit} est introuvable dans le dépôt`,
+        t('{0}: commit {1} cannot be found in the repository', [identity, pkg.commit]),
         { identity },
       );
     }
@@ -369,7 +387,7 @@ async function resolveGit(
     // req-lk-015 : échec fermé si l'arbre ne correspond plus à l'empreinte enregistrée.
     throw new AhubError(
       'LOCK_MISMATCH',
-      `${identity} : tree_sha256 attendu ${lock!.tree_sha256}, observé ${pkg.treeSha256}`,
+      t('{0}: expected tree_sha256 {1}, observed {2}', [identity, lock!.tree_sha256, pkg.treeSha256]),
       { identity, expected: lock!.tree_sha256, actual: pkg.treeSha256 },
     );
   }

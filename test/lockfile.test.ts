@@ -87,7 +87,7 @@ describe('lockfile apm.lock.yaml (spec §5)', () => {
 
   it('refuse une version inconnue en proposant les deux issues (req-lk-004)', () => {
     expect(() => parseLockfile('lockfile_version: "9"\ndependencies: []\n')).toThrowError(
-      /Mettez à jour ahub, ou régénérez/,
+      /Update ahub, or regenerate/,
     );
   });
 

@@ -7,6 +7,7 @@ import { fileHash, sha256Hex, stableStringify } from './hash.js';
 import type { MergedEntryRecord, MergedFileRecord } from './lockfile.js';
 import type { Target } from './manifest.js';
 import { jsonIsEffectivelyEmpty, mergeJson, mergeToml, unmergeJson, unmergeToml } from './merge.js';
+import { t } from './i18n.js';
 
 /** Opérations de déploiement produites par les adaptateurs pour un paquet. */
 export interface PackageOps {
@@ -83,11 +84,11 @@ export async function resolveInside(root: string, rel: string): Promise<string> 
     path.posix.isAbsolute(rel) ||
     /^[A-Za-z]:/.test(rel)
   ) {
-    throw new AhubError('CONFLICT', `chemin de déploiement refusé : « ${rel} »`);
+    throw new AhubError('CONFLICT', t('deployment path refused: "{0}"', [rel]));
   }
   const segments = rel.split('/');
   if (segments.some((s) => s === '' || s === '.' || s === '..')) {
-    throw new AhubError('CONFLICT', `chemin de déploiement refusé : « ${rel} »`);
+    throw new AhubError('CONFLICT', t('deployment path refused: "{0}"', [rel]));
   }
   let current = root;
   for (const seg of segments) {
@@ -95,7 +96,7 @@ export async function resolveInside(root: string, rel: string): Promise<string> 
     try {
       const st = await lstat(current);
       if (st.isSymbolicLink()) {
-        throw new AhubError('CONFLICT', `« ${rel} » traverse un lien symbolique : écriture refusée`);
+        throw new AhubError('CONFLICT', t('"{0}" goes through a symbolic link: write refused', [rel]));
       }
     } catch (e) {
       if (e instanceof AhubError) throw e;
@@ -149,7 +150,11 @@ export async function prepareDeploy(
         if (existing.hash !== hash) {
           throw new AhubError(
             'CONFLICT',
-            `deux sources écrivent « ${op.path} » avec des contenus différents (${existing.owners.join(', ')} et ${pkg.identity})`,
+            t('two sources write "{0}" with different contents ({1} and {2})', [
+              op.path,
+              existing.owners.join(', '),
+              pkg.identity,
+            ]),
             { path: op.path },
           );
         }
@@ -195,8 +200,8 @@ export async function prepareDeploy(
         reason: f.reason!,
         message:
           f.reason === 'modified'
-            ? `« ${f.path} » a été modifié à la main depuis son installation`
-            : `« ${f.path} » existe déjà et n’est pas géré par ahub`,
+            ? t('"{0}" was edited by hand since it was installed', [f.path])
+            : t('"{0}" already exists and is not managed by ahub', [f.path]),
       });
     }
   }
@@ -218,7 +223,7 @@ export async function prepareDeploy(
         plan.conflicts.push({
           path: f,
           reason: 'modified',
-          message: `« ${f} » a été modifié à la main : il ne sera pas supprimé sans accord`,
+          message: t('"{0}" was edited by hand: it will not be deleted without agreement', [f]),
         });
       }
     }
@@ -277,7 +282,7 @@ export async function prepareDeploy(
       text = res.text;
       ensured.push(...res.owned.filter((e) => e.type === 'ensure'));
       for (const c of res.conflicts) {
-        const message = `${filePath} : ${c.message}`;
+        const message = t('{0}: {1}', [filePath, c.message]);
         pm.conflicts.push(message);
         plan.conflicts.push({ path: filePath, reason: 'merge', message });
       }
@@ -299,7 +304,7 @@ export async function prepareDeploy(
       const stillWanted = newOps.some((n) => n.identity === identity);
       for (const k of kept) {
         if (stillWanted) continue; // le conflit a déjà été signalé à la pose
-        const message = `${filePath} : « ${describeEntry(k)} » a été modifié à la main, entrée laissée en place`;
+        const message = t('{0}: "{1}" was edited by hand, entry left in place', [filePath, describeEntry(k)]);
         pm.conflicts.push(message);
         plan.conflicts.push({ path: filePath, reason: 'merge', message });
       }

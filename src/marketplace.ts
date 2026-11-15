@@ -1,5 +1,6 @@
 import { cloneUrl, type DepRef, parseDepString } from './depref.js';
 import type { Diagnostic } from './errors.js';
+import { t } from './i18n.js';
 
 /** Entrée de catalogue normalisée, indépendante du format de marketplace. */
 export interface CatalogEntry {
@@ -133,7 +134,7 @@ export function parseMarketplace(
     if (!source) {
       diagnostics.push({
         code: 'MARKETPLACE_SOURCE_UNSUPPORTED',
-        message: `« ${name} » : type de source non pris en charge, entrée ignorée`,
+        message: t('"{0}": unsupported source type, entry skipped', [name]),
       });
       continue;
     }
@@ -186,7 +187,10 @@ export function exportMarketplace(
     if (!opts.includeAll && e.nativePlugin !== true) {
       diagnostics.push({
         code: 'EXPORT_NOT_NATIVE_PLUGIN',
-        message: `« ${e.name} » n’a pas la disposition d’un plugin natif : non exporté (installable par ahub ou apm)`,
+        message: t(
+          '"{0}" does not have a native plugin layout: not exported (installable with ahub or apm)',
+          [e.name],
+        ),
       });
       continue;
     }
@@ -198,7 +202,7 @@ export function exportMarketplace(
     } catch {
       diagnostics.push({
         code: 'EXPORT_SOURCE_INVALID',
-        message: `« ${e.name} » : source « ${e.source} » non exportable`,
+        message: t('"{0}": source "{1}" cannot be exported', [e.name, e.source]),
       });
       continue;
     }
@@ -229,7 +233,7 @@ export function exportMarketplace(
       if (ref.kind !== 'local') {
         diagnostics.push({
           code: 'EXPORT_CURSOR_LOCAL_ONLY',
-          message: `« ${e.name} » : Cursor ne documente que des sources locales, entrée non exportée`,
+          message: t('"{0}": Cursor only documents local sources, entry not exported', [e.name]),
         });
         continue;
       }

@@ -2,6 +2,7 @@ import type { Diagnostic } from '../errors.js';
 import type { McpDependency, Target } from '../manifest.js';
 import type { HookGroup, HookPrimitive, PackageContent, SkillPrimitive, TextPrimitive } from '../package.js';
 import type { AdapterContext, AdapterResult, ExecutableNotice, FileOp } from './types.js';
+import { t } from '../i18n.js';
 
 export function emptyResult(): AdapterResult {
   return { files: [], merges: [], executables: [], diagnostics: [] };
@@ -52,9 +53,10 @@ export function toolList(value: unknown): string[] | undefined {
 export function capabilityDiagnostic(agent: TextPrimitive, target: Target, dropped: string[]): Diagnostic {
   return {
     code: 'AGENT_CAPABILITY_NOT_PRESERVED',
-    message:
-      `agent « ${agent.name} » → ${target} : les champs ${dropped.map((d) => `« ${d} »`).join(', ')} ne sont pas reproduits à l’identique ; ` +
-      'l’agent généré peut avoir un accès plus large que celui déclaré.',
+    message: t(
+      'agent "{0}" → {1}: the fields {2} are not reproduced exactly; the generated agent may have broader access than declared.',
+      [agent.name, target, dropped.map((d) => `"${d}"`).join(', ')],
+    ),
     path: agent.sourcePath,
   };
 }
@@ -62,7 +64,10 @@ export function capabilityDiagnostic(agent: TextPrimitive, target: Target, dropp
 export function unparsedFrontmatterDiagnostic(agent: TextPrimitive, target: Target): Diagnostic {
   return {
     code: 'AGENT_CAPABILITY_UNVERIFIED',
-    message: `agent « ${agent.name} » → ${target} : frontmatter illisible, les restrictions de capacité n’ont pas pu être vérifiées.`,
+    message: t('agent "{0}" → {1}: unreadable front matter, capability restrictions could not be verified.', [
+      agent.name,
+      target,
+    ]),
     path: agent.sourcePath,
   };
 }
@@ -141,7 +146,11 @@ export function translateHooks(
   const diagnostics: Diagnostic[] = [];
   const executables: ExecutableNotice[] = [];
   const skip = (h: HookPrimitive, code: string, message: string): void => {
-    diagnostics.push({ code, message: `hook « ${h.name} » → ${target} : ${message}`, path: h.sourcePath });
+    diagnostics.push({
+      code,
+      message: t('hook "{0}" → {1}: {2}', [h.name, target, message]),
+      path: h.sourcePath,
+    });
   };
   for (const h of hooks) {
     for (const [sourceEvent, groups] of Object.entries(h.events)) {
@@ -149,7 +158,7 @@ export function translateHooks(
       let event: string | null | undefined = canonical ? HOOK_EVENTS[canonical]![target] : undefined;
       if (!event && opts.passUnknownEvents && /^[A-Z][A-Za-z]+$/.test(sourceEvent)) event = sourceEvent;
       if (!event) {
-        skip(h, 'HOOK_EVENT_UNSUPPORTED', `événement « ${sourceEvent} » sans équivalent, ignoré`);
+        skip(h, 'HOOK_EVENT_UNSUPPORTED', t('event "{0}" has no equivalent, skipped', [sourceEvent]));
         continue;
       }
       for (const group of groups as HookGroup[]) {
@@ -157,7 +166,10 @@ export function translateHooks(
           skip(
             h,
             'HOOK_MATCHER_UNSUPPORTED',
-            `le filtre « ${group.matcher} » n’existe pas sur cette cible ; hook ignoré pour ne pas l’élargir à tous les outils`,
+            t(
+              'the matcher "{0}" does not exist on this target; hook skipped so that it is not widened to every tool',
+              [group.matcher],
+            ),
           );
           continue;
         }
@@ -167,7 +179,7 @@ export function translateHooks(
             skip(
               h,
               'HOOK_TYPE_UNSUPPORTED',
-              `gestionnaire de type « ${String(type)} » non pris en charge, ignoré`,
+              t('handler of type "{0}" is not supported, skipped', [String(type)]),
             );
             continue;
           }
@@ -176,14 +188,16 @@ export function translateHooks(
             skip(
               h,
               'HOOK_SCRIPT_BUNDLE_UNSUPPORTED',
-              'la commande référence un script du paquet ; le déploiement de scripts de hook n’est pas pris en charge en v0.1, hook ignoré',
+              t(
+                'the command refers to a script in the package; deploying hook scripts is not supported in v0.1, hook skipped',
+              ),
             );
             continue;
           }
-          const t: TranslatedHook = { hookName: h.name, event, command };
-          if (group.matcher) t.matcher = group.matcher;
-          if (typeof handler.timeout === 'number') t.timeout = handler.timeout;
-          out.push(t);
+          const translated: TranslatedHook = { hookName: h.name, event, command };
+          if (group.matcher) translated.matcher = group.matcher;
+          if (typeof handler.timeout === 'number') translated.timeout = handler.timeout;
+          out.push(translated);
           executables.push({ kind: 'hook', target, name: h.name, detail: event, command });
         }
       }
@@ -220,7 +234,10 @@ export function deployableMcp(
     if (m.registry !== false) {
       diagnostics.push({
         code: 'MCP_REGISTRY_UNSUPPORTED',
-        message: `serveur MCP « ${m.name} » → ${target} : la résolution par registre MCP n’est pas prise en charge en v0.1 ; déclarez-le avec « registry: false ».`,
+        message: t(
+          'MCP server "{0}" → {1}: resolution through an MCP registry is not supported in v0.1; declare it with "registry: false".',
+          [m.name, target],
+        ),
       });
       continue;
     }
@@ -234,7 +251,10 @@ export function deployableMcp(
     if (usesInput && target !== 'copilot') {
       diagnostics.push({
         code: 'MCP_INPUT_UNSUPPORTED',
-        message: `serveur MCP « ${m.name} » → ${target} : les variables \${input:…} n’existent que dans VS Code ; valeur transmise telle quelle.`,
+        message: t(
+          'MCP server "{0}" → {1}: ${input:…} variables only exist in VS Code; value passed as is.',
+          [m.name, target],
+        ),
       });
     }
     servers.push(m);

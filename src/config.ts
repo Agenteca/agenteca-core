@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { AhubError } from './errors.js';
+import { t } from './i18n.js';
 
 /**
  * Configuration propre à ahub (liste des registres). Aucun standard ne couvre
@@ -32,7 +33,7 @@ export async function loadConfig(env: NodeJS.ProcessEnv = process.env): Promise<
     const data = JSON.parse(await readFile(file, 'utf8')) as Partial<AhubConfig>;
     return { registries: Array.isArray(data.registries) ? data.registries : [] };
   } catch {
-    throw new AhubError('USAGE', `configuration illisible : ${file}`);
+    throw new AhubError('USAGE', t('unreadable configuration: {0}', [file]));
   }
 }
 

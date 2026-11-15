@@ -12,6 +12,7 @@ import {
   unparsedFrontmatterDiagnostic,
 } from './common.js';
 import type { Adapter } from './types.js';
+import { t } from '../i18n.js';
 
 /**
  * Cursor. Sous-agents `.cursor/agents/*.md`, skills `.agents/skills/` (ou
@@ -45,7 +46,10 @@ export const cursorAdapter: Adapter = (content, ctx) => {
     if (user) {
       r.diagnostics.push({
         code: 'COMMAND_USER_SCOPE_UNCONFIRMED',
-        message: `commande « ${p.name} » → cursor : le dossier utilisateur des commandes n’est pas documenté par Cursor ; non déployée.`,
+        message: t(
+          'command "{0}" → cursor: Cursor does not document a user folder for commands; not deployed.',
+          [p.name],
+        ),
         path: p.sourcePath,
       });
       continue;
@@ -64,7 +68,10 @@ export const cursorAdapter: Adapter = (content, ctx) => {
     if (user) {
       r.diagnostics.push({
         code: 'INSTRUCTION_USER_SCOPE_UNSUPPORTED',
-        message: `instruction « ${i.name} » → cursor : les règles utilisateur de Cursor se gèrent dans son interface ; non déployée.`,
+        message: t(
+          'instruction "{0}" → cursor: Cursor user rules are managed in its interface; not deployed.',
+          [i.name],
+        ),
         path: i.sourcePath,
       });
       continue;

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { AhubError, type Diagnostic } from './errors.js';
 import { MANIFEST_FILE, type Manifest, ManifestFile, type McpDependency } from './manifest.js';
 import { splitFrontmatter } from './yaml.js';
+import { t } from './i18n.js';
 
 export type PackageLayout = 'apm_package' | 'skill_bundle' | 'skill_collection' | 'plugin' | 'hook_package';
 
@@ -104,7 +105,7 @@ async function walk(root: string, rel: string, diagnostics: Diagnostic[], out: P
     if (st.isSymbolicLink()) {
       diagnostics.push({
         code: 'SYMLINK_SKIPPED',
-        message: `lien symbolique ignoré : ${childRel}`,
+        message: t('symbolic link skipped: {0}', [childRel]),
         path: childRel,
       });
     } else if (st.isDirectory()) {
@@ -113,13 +114,13 @@ async function walk(root: string, rel: string, diagnostics: Diagnostic[], out: P
       if (st.size > MAX_FILE_BYTES) {
         diagnostics.push({
           code: 'FILE_TOO_LARGE',
-          message: `fichier ignoré (> 5 Mo) : ${childRel}`,
+          message: t('file skipped (> 5 MB): {0}', [childRel]),
           path: childRel,
         });
         continue;
       }
       if (out.length >= MAX_FILES) {
-        throw new AhubError('PACKAGE_INVALID', `le paquet dépasse ${MAX_FILES} fichiers`);
+        throw new AhubError('PACKAGE_INVALID', t('the package has more than {0} files', [MAX_FILES]));
       }
       out.push({ relPath: childRel, bytes: await readFile(childAbs), executable: (st.mode & 0o111) !== 0 });
     }
@@ -146,7 +147,7 @@ async function readSkill(
   if (!safeName(name)) {
     diagnostics.push({
       code: 'SKILL_NAME_INVALID',
-      message: `skill ignoré, nom de dossier non sûr : ${name}`,
+      message: t('skill skipped, unsafe folder name: {0}', [name]),
       path: sourceDir,
     });
     return undefined;
@@ -158,7 +159,7 @@ async function readSkill(
   if (error || !frontmatter) {
     diagnostics.push({
       code: 'SKILL_FRONTMATTER_INVALID',
-      message: `${where} : frontmatter absent ou illisible${error ? ` (${error})` : ''}`,
+      message: t('{0}: front matter missing or unreadable{1}', [where, error ? ` (${error})` : '']),
       path: where,
     });
   } else {
@@ -167,13 +168,13 @@ async function readSkill(
     if (typeof fmName !== 'string' || !SKILL_NAME_RE.test(fmName) || fmName.length > 64) {
       diagnostics.push({
         code: 'SKILL_NAME_INVALID',
-        message: `${where} : « name » doit faire 1 à 64 caractères a-z, 0-9, tirets`,
+        message: t('{0}: "name" must be 1 to 64 characters: a-z, 0-9, hyphens', [where]),
         path: where,
       });
     } else if (fmName !== name) {
       diagnostics.push({
         code: 'SKILL_NAME_MISMATCH',
-        message: `${where} : « name » (${fmName}) diffère du dossier (${name})`,
+        message: t('{0}: "name" ({1}) differs from the folder ({2})', [where, fmName, name]),
         path: where,
       });
     }
@@ -181,7 +182,7 @@ async function readSkill(
     if (typeof desc !== 'string' || desc.length === 0 || desc.length > 1024) {
       diagnostics.push({
         code: 'SKILL_DESCRIPTION_INVALID',
-        message: `${where} : « description » doit faire 1 à 1024 caractères`,
+        message: t('{0}: "description" must be 1 to 1024 characters', [where]),
         path: where,
       });
     }
@@ -226,7 +227,7 @@ async function readTextPrimitives(
     if (!safeName(name)) {
       diagnostics.push({
         code: 'NAME_INVALID',
-        message: `fichier ignoré, nom non sûr : ${sourcePath}`,
+        message: t('file skipped, unsafe name: {0}', [sourcePath]),
         path: sourcePath,
       });
       continue;
@@ -235,7 +236,7 @@ async function readTextPrimitives(
     if (st.size > MAX_FILE_BYTES) {
       diagnostics.push({
         code: 'FILE_TOO_LARGE',
-        message: `fichier ignoré (> 5 Mo) : ${sourcePath}`,
+        message: t('file skipped (> 5 MB): {0}', [sourcePath]),
         path: sourcePath,
       });
       continue;
@@ -247,7 +248,7 @@ async function readTextPrimitives(
       prim.frontmatterError = error;
       diagnostics.push({
         code: 'FRONTMATTER_INVALID',
-        message: `${sourcePath} : frontmatter illisible (${error})`,
+        message: t('{0}: unreadable front matter ({1})', [sourcePath, error]),
         path: sourcePath,
       });
     }
@@ -323,7 +324,7 @@ async function readHooks(
       } catch {
         diagnostics.push({
           code: 'HOOK_JSON_INVALID',
-          message: `${sourcePath} : JSON invalide, hooks ignorés`,
+          message: t('{0}: invalid JSON, hooks skipped', [sourcePath]),
           path: sourcePath,
         });
         continue;
@@ -332,7 +333,7 @@ async function readHooks(
       if (!events) {
         diagnostics.push({
           code: 'HOOK_JSON_INVALID',
-          message: `${sourcePath} : structure de hooks non reconnue`,
+          message: t('{0}: unrecognised hook structure', [sourcePath]),
           path: sourcePath,
         });
         continue;
@@ -340,7 +341,7 @@ async function readHooks(
       if (Object.keys(events).length === 0) {
         diagnostics.push({
           code: 'HOOK_EMPTY',
-          message: `${sourcePath} : aucun hook déclaré`,
+          message: t('{0}: no hook declared', [sourcePath]),
           path: sourcePath,
         });
         continue;
@@ -397,7 +398,7 @@ function dedupeByName<T extends { name: string }>(items: T[], kind: string, diag
     if (seen.has(item.name)) {
       diagnostics.push({
         code: 'DUPLICATE_PRIMITIVE',
-        message: `${kind} « ${item.name} » défini plusieurs fois ; première définition conservée`,
+        message: t('{0} "{1}" is defined more than once; first definition kept', [kind, item.name]),
       });
     } else {
       seen.set(item.name, item);
@@ -412,7 +413,7 @@ function dedupeByName<T extends { name: string }>(items: T[], kind: string, diag
  */
 export async function readPackage(dir: string, fallbackName: string): Promise<PackageContent> {
   if (!(await isDir(dir))) {
-    throw new AhubError('PACKAGE_INVALID', `le paquet « ${fallbackName} » n’est pas un dossier`);
+    throw new AhubError('PACKAGE_INVALID', t('package "{0}" is not a folder', [fallbackName]));
   }
   const diagnostics: Diagnostic[] = [];
   let manifest: Manifest | undefined;
@@ -511,18 +512,21 @@ export async function readPackage(dir: string, fallbackName: string): Promise<Pa
     if (hooks.length === 0) {
       throw new AhubError(
         'PACKAGE_INVALID',
-        `« ${fallbackName} » ne contient aucune disposition de paquet reconnue (apm.yml, .apm/, SKILL.md, skills/, plugin.json, hooks/)`,
+        t(
+          '"{0}" contains no recognised package layout (apm.yml, .apm/, SKILL.md, skills/, plugin.json, hooks/)',
+          [fallbackName],
+        ),
       );
     }
     content.layout = 'hook_package';
     content.hooks.push(...hooks);
   }
 
-  content.skills = dedupeByName(content.skills, 'skill', diagnostics);
-  content.agents = dedupeByName(content.agents, 'agent', diagnostics);
-  content.prompts = dedupeByName(content.prompts, 'commande', diagnostics);
-  content.instructions = dedupeByName(content.instructions, 'instruction', diagnostics);
-  content.mcp = dedupeByName(content.mcp, 'serveur MCP', diagnostics);
+  content.skills = dedupeByName(content.skills, t('skill'), diagnostics);
+  content.agents = dedupeByName(content.agents, t('agent'), diagnostics);
+  content.prompts = dedupeByName(content.prompts, t('command'), diagnostics);
+  content.instructions = dedupeByName(content.instructions, t('instruction'), diagnostics);
+  content.mcp = dedupeByName(content.mcp, t('MCP server'), diagnostics);
 
   // Fichiers sources retenus, pour le scan de sécurité et l'aperçu avant installation.
   const seen = new Set<string>();

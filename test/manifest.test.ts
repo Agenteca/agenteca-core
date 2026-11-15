@@ -19,19 +19,21 @@ describe('manifeste apm.yml (spec §4)', () => {
   });
 
   it('refuse les documents non conformes', () => {
-    expect(() => ManifestFile.parse('- a\n- b\n')).toThrowError(/dictionnaire/);
+    expect(() => ManifestFile.parse('- a\n- b\n')).toThrowError(/YAML mapping/);
     expect(() => ManifestFile.parse('version: 1.0.0\n')).toThrowError(/name/);
     expect(() => ManifestFile.parse('name: x\n')).toThrowError(/version/);
     expect(() =>
       ManifestFile.parse('name: x\nversion: 1.0.0\ntarget: claude\ntargets: [codex]\n'),
-    ).toThrowError(/mutuellement exclusifs/);
+    ).toThrowError(/mutually exclusive/);
     expect(() => ManifestFile.parse('name: x\nversion: 1.0.0\ntargets: [emacs]\n')).toThrowError(
-      /cible inconnue/,
+      /unknown target/,
     );
   });
 
   it('applique le sous-ensemble YAML sûr (req-mf-020)', () => {
-    expect(() => ManifestFile.parse('name: &a x\nversion: 1.0.0\nauthor: *a\n')).toThrowError(/ancres|alias/);
+    expect(() => ManifestFile.parse('name: &a x\nversion: 1.0.0\nauthor: *a\n')).toThrowError(
+      /anchors|aliases/,
+    );
     expect(() => ManifestFile.parse('name: !custom x\nversion: 1.0.0\n')).toThrowError(/tag/);
     // Pas de coercition octale YAML 1.1.
     expect((parseYamlSafe('mode: 0777\n', 't.yml') as { mode: unknown }).mode).toBe(777);
@@ -54,7 +56,7 @@ describe('manifeste apm.yml (spec §4)', () => {
     ).toThrowError(/url/);
     expect(() =>
       ManifestFile.parse(`${base}    - {name: s, registry: false, transport: stdio, command: "my bin"}\n`),
-    ).toThrowError(/espaces/);
+    ).toThrowError(/spaces/);
     const ok = ManifestFile.parse(
       `${base}    - {name: s, registry: false, transport: stdio, command: "my bin", args: []}\n`,
     ).manifest;

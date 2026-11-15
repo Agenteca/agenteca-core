@@ -8,6 +8,7 @@ import {
 } from './depref.js';
 import { AhubError, type Diagnostic } from './errors.js';
 import { parseYamlDocument } from './yaml.js';
+import { t } from './i18n.js';
 
 export const MANIFEST_FILE = 'apm.yml';
 
@@ -70,7 +71,7 @@ export interface Manifest {
 }
 
 function invalid(file: string, message: string): never {
-  throw new AhubError('MANIFEST_INVALID', `${file} : ${message}`, { file });
+  throw new AhubError('MANIFEST_INVALID', t('{0}: {1}', [file, message]), { file });
 }
 
 /** Normalise une liste de cibles (alias → `copilot`), rejette les inconnues (req-mf-005). */
@@ -79,16 +80,16 @@ export function normalizeTargets(value: unknown, file: string): string[] | undef
   const list = Array.isArray(value) ? value : [value];
   const out: string[] = [];
   for (const raw of list) {
-    if (typeof raw !== 'string') invalid(file, 'une cible doit être une chaîne');
+    if (typeof raw !== 'string') invalid(file, t('a target must be a string'));
     for (const token of raw
       .split(',')
       .map((t) => t.trim())
       .filter(Boolean)) {
-      const t = TARGET_ALIASES[token] ?? token;
-      if (!(CANONICAL_TARGETS as readonly string[]).includes(t) && !VENDOR_TARGET_RE.test(t)) {
-        invalid(file, `cible inconnue « ${token} »`);
+      const target = TARGET_ALIASES[token] ?? token;
+      if (!(CANONICAL_TARGETS as readonly string[]).includes(target) && !VENDOR_TARGET_RE.test(target)) {
+        invalid(file, t('unknown target "{0}"', [token]));
       }
-      if (!out.includes(t)) out.push(t);
+      if (!out.includes(target)) out.push(target);
     }
   }
   return out;
@@ -96,13 +97,13 @@ export function normalizeTargets(value: unknown, file: string): string[] | undef
 
 function parseMcpEntry(entry: unknown, file: string): McpDependency {
   if (typeof entry === 'string') {
-    if (!entry.trim()) invalid(file, 'entrée MCP vide');
+    if (!entry.trim()) invalid(file, t('empty MCP entry'));
     return { name: entry.trim() };
   }
   if (entry === null || typeof entry !== 'object' || Array.isArray(entry))
-    invalid(file, 'entrée MCP invalide');
+    invalid(file, t('invalid MCP entry'));
   const o = entry as Record<string, unknown>;
-  if (typeof o.name !== 'string' || !o.name) invalid(file, 'un serveur MCP doit avoir un « name »');
+  if (typeof o.name !== 'string' || !o.name) invalid(file, t('an MCP server must have a "name"'));
   const dep: McpDependency = { name: o.name };
   if (o.registry === false || typeof o.registry === 'string') dep.registry = o.registry;
   if (typeof o.transport === 'string') dep.transport = o.transport as McpTransport;
@@ -116,16 +117,16 @@ function parseMcpEntry(entry: unknown, file: string): McpDependency {
 
   // req-mf-012 : validation des serveurs auto-définis.
   if (dep.registry === false) {
-    if (!dep.transport) invalid(file, `serveur MCP « ${dep.name} » : « transport » manquant`);
+    if (!dep.transport) invalid(file, t('MCP server "{0}": "transport" is missing', [dep.name]));
     if (dep.transport === 'stdio') {
-      if (!dep.command) invalid(file, `serveur MCP « ${dep.name} » : « command » manquant (stdio)`);
+      if (!dep.command) invalid(file, t('MCP server "{0}": "command" is missing (stdio)', [dep.name]));
       if (/\s/.test(dep.command) && o.args === undefined) {
-        invalid(file, `serveur MCP « ${dep.name} » : « command » contient des espaces sans « args »`);
+        invalid(file, t('MCP server "{0}": "command" contains spaces without "args"', [dep.name]));
       }
     } else if (['http', 'sse', 'streamable-http'].includes(dep.transport)) {
-      if (!dep.url) invalid(file, `serveur MCP « ${dep.name} » : « url » manquant (${dep.transport})`);
+      if (!dep.url) invalid(file, t('MCP server "{0}": "url" is missing ({1})', [dep.name, dep.transport]));
     } else {
-      invalid(file, `serveur MCP « ${dep.name} » : transport inconnu « ${String(dep.transport)} »`);
+      invalid(file, t('MCP server "{0}": unknown transport "{1}"', [dep.name, String(dep.transport)]));
     }
   }
   return dep;
@@ -149,7 +150,7 @@ function scalarSource(doc: Document, key: string): string | undefined {
 function depList(doc: Document, block: string, key: string): unknown[] {
   const deps = doc.getIn([block, key]);
   if (deps === undefined || deps === null) return [];
-  if (!isSeq(deps)) invalid(MANIFEST_FILE, `« ${block}.${key} » doit être une liste`);
+  if (!isSeq(deps)) invalid(MANIFEST_FILE, t('"{0}.{1}" must be a list', [block, key]));
   return (deps as YAMLSeq).toJSON() as unknown[];
 }
 
@@ -166,23 +167,23 @@ export class ManifestFile {
 
   static parse(text: string, file = MANIFEST_FILE): ManifestFile {
     const doc = parseYamlDocument(text, file, 'MANIFEST_INVALID');
-    if (!isMap(doc.contents)) invalid(file, 'le document doit être un dictionnaire YAML (req-mf-001)');
+    if (!isMap(doc.contents)) invalid(file, t('the document must be a YAML mapping (req-mf-001)'));
     const diagnostics: Diagnostic[] = [];
 
     const name = scalarSource(doc, 'name');
-    if (!name || !name.trim()) invalid(file, 'champ « name » manquant ou vide (req-mf-002)');
+    if (!name || !name.trim()) invalid(file, t('field "name" is missing or empty (req-mf-002)'));
     const version = scalarSource(doc, 'version');
-    if (version === undefined) invalid(file, 'champ « version » manquant (req-mf-003)');
+    if (version === undefined) invalid(file, t('field "version" is missing (req-mf-003)'));
     if (!SEMVER_RE.test(version)) {
       diagnostics.push({
         code: 'VERSION_NOT_SEMVER',
-        message: `${file} : « ${version} » n’est pas une version SemVer 2.0.0`,
+        message: t('{0}: "{1}" is not a SemVer 2.0.0 version', [file, version]),
       });
     }
 
     const js = doc.toJS() as Record<string, unknown>;
     if (js.target !== undefined && js.targets !== undefined) {
-      invalid(file, '« target » et « targets » sont mutuellement exclusifs (req-tg-008)');
+      invalid(file, t('"target" and "targets" are mutually exclusive (req-tg-008)'));
     }
     const targets = normalizeTargets(js.targets ?? js.target, file);
     const defaultHost =
@@ -261,10 +262,7 @@ export class ManifestFile {
    */
   setApmDependency(ref: DepRef): boolean {
     if (ref.kind === 'registry') {
-      throw new AhubError(
-        'UNSUPPORTED',
-        'les dépendances de registre (« id: ») ne sont pas prises en charge en v0.1',
-      );
+      throw new AhubError('UNSUPPORTED', t('registry dependencies ("id:") are not supported in v0.1'));
     }
     const seq = this.apmSeq(true)!;
     const identity = depIdentity(ref);

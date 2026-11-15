@@ -8,6 +8,7 @@ import {
 import { parse as parseToml, stringify as tomlStringify } from 'smol-toml';
 import { deepEqual } from './hash.js';
 import type { MergedEntryRecord } from './lockfile.js';
+import { t } from './i18n.js';
 
 const FORMAT: FormattingOptions = { insertSpaces: true, tabSize: 2, eol: '\n' };
 
@@ -59,7 +60,7 @@ function edit(text: string, jsonPath: Array<string | number>, value: unknown, in
 }
 
 function unreadable(): MergeConflict {
-  return { keyPath: [], reason: 'unreadable', message: 'fichier illisible (JSON invalide) : laissé intact' };
+  return { keyPath: [], reason: 'unreadable', message: t('unreadable file (invalid JSON): left untouched') };
 }
 
 /**
@@ -89,7 +90,7 @@ export function mergeJson(existing: string | undefined, entries: MergedEntryReco
         conflicts.push({
           keyPath: entry.keyPath,
           reason: 'foreign',
-          message: `« ${entry.keyPath.join('.')} » existe déjà avec une autre valeur`,
+          message: t('"{0}" already exists with a different value', [entry.keyPath.join('.')]),
         });
       }
     } else if (entry.type === 'append') {
@@ -97,7 +98,7 @@ export function mergeJson(existing: string | undefined, entries: MergedEntryReco
         conflicts.push({
           keyPath: entry.keyPath,
           reason: 'foreign',
-          message: `« ${entry.keyPath.join('.')} » n’est pas une liste`,
+          message: t('"{0}" is not a list', [entry.keyPath.join('.')]),
         });
         continue;
       }
@@ -166,7 +167,7 @@ export function jsonIsEffectivelyEmpty(text: string, ensured: MergedEntryRecord[
 
 function markers(blockId: string): { start: string; end: string } {
   return {
-    start: `# >>> ahub: ${blockId} (géré par ahub — ne pas modifier ; ouvrez une nouvelle table avant d’ajouter quoi que ce soit dessous)`,
+    start: `# >>> ahub: ${blockId} (managed by ahub — do not edit; open a new table before adding anything below)`,
     end: `# <<< ahub: ${blockId}`,
   };
 }
@@ -232,7 +233,11 @@ export function mergeToml(
       text,
       owned: previouslyOwned,
       conflicts: [
-        { keyPath: [], reason: 'modified', message: `le bloc géré « ${blockId} » a été modifié à la main` },
+        {
+          keyPath: [],
+          reason: 'modified',
+          message: t('the managed block "{0}" was edited by hand', [blockId]),
+        },
       ],
     };
   }
@@ -244,7 +249,7 @@ export function mergeToml(
       text,
       owned: [],
       conflicts: [
-        { keyPath: [], reason: 'unreadable', message: 'fichier illisible (TOML invalide) : laissé intact' },
+        { keyPath: [], reason: 'unreadable', message: t('unreadable file (invalid TOML): left untouched') },
       ],
     };
   }
@@ -256,7 +261,7 @@ export function mergeToml(
       conflicts.push({
         keyPath: entry.keyPath,
         reason: 'foreign',
-        message: `« ${entry.keyPath.join('.')} » existe déjà avec une autre valeur`,
+        message: t('"{0}" already exists with a different value', [entry.keyPath.join('.')]),
       });
     }
     // valeur identique hors bloc : déjà configurée par l'utilisateur, rien à écrire ni à posséder

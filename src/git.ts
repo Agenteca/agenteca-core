@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { AhubError } from './errors.js';
 import { canonicalTreeHash, sha256Hex, type TreeEntry } from './hash.js';
+import { t } from './i18n.js';
 
 export interface GitOptions {
   /** Dossier des miroirs git locaux. */
@@ -69,7 +70,7 @@ export function git(
         if (err) {
           const detail = redact(String(stderr || err.message).trim());
           reject(
-            new AhubError('GIT_FAILED', `git ${redact(args[0] ?? '')} a échoué : ${detail}`, {
+            new AhubError('GIT_FAILED', t('git {0} failed: {1}', [redact(args[0] ?? ''), detail]), {
               args: args.map(redact),
             }),
           );
@@ -197,18 +198,18 @@ function readBlobs(gitDir: string, oids: string[]): Promise<Map<string, Buffer>>
     });
     const chunks: Buffer[] = [];
     child.stdout.on('data', (c: Buffer) => chunks.push(c));
-    child.on('error', (e) => reject(new AhubError('GIT_FAILED', `git cat-file a échoué : ${e.message}`)));
+    child.on('error', (e) => reject(new AhubError('GIT_FAILED', t('git cat-file failed: {0}', [e.message]))));
     child.on('close', (code) => {
       if (code !== 0)
-        return reject(new AhubError('GIT_FAILED', `git cat-file s’est terminé avec le code ${code}`));
+        return reject(new AhubError('GIT_FAILED', t('git cat-file exited with code {0}', [code])));
       const buf = Buffer.concat(chunks);
       let pos = 0;
       for (const oid of oids) {
         const nl = buf.indexOf(10, pos);
-        if (nl === -1) return reject(new AhubError('GIT_FAILED', 'sortie de git cat-file tronquée'));
+        if (nl === -1) return reject(new AhubError('GIT_FAILED', t('truncated git cat-file output')));
         const header = buf.subarray(pos, nl).toString('utf8').split(' ');
         if (header[1] === 'missing')
-          return reject(new AhubError('GIT_FAILED', `objet git manquant : ${oid}`));
+          return reject(new AhubError('GIT_FAILED', t('missing git object: {0}', [oid])));
         const size = Number(header[2]);
         result.set(oid, buf.subarray(nl + 1, nl + 1 + size));
         pos = nl + 1 + size + 1;

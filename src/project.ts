@@ -32,6 +32,7 @@ import { MANIFEST_FILE, ManifestFile, SUPPORTED_TARGETS, type Target } from './m
 import { type PackageSummary, summarizePackage } from './package.js';
 import { checkOutdated, type OutdatedInfo, resolveAll, type ResolvedPackage } from './resolver.js';
 import { type Finding, hasBlocking, scanFiles } from './scan.js';
+import { t } from './i18n.js';
 
 export const AHUB_VERSION = '0.1.0';
 
@@ -62,10 +63,7 @@ export function createContext(opts: {
     try {
       git.mirrors = JSON.parse(env.AHUB_GIT_MIRRORS) as Record<string, string>;
     } catch {
-      throw new AhubError(
-        'USAGE',
-        'AHUB_GIT_MIRRORS doit être un objet JSON { "hôte/propriétaire/dépôt": "url" }',
-      );
+      throw new AhubError('USAGE', t('AHUB_GIT_MIRRORS must be a JSON object { "host/owner/repo": "url" }'));
     }
   }
   if (opts.global) {
@@ -177,12 +175,12 @@ export function selectTargets(
   if (declared && declared.length > 0) {
     if (declared.includes('all')) return [...SUPPORTED_TARGETS];
     const out: Target[] = [];
-    for (const t of declared) {
-      if (supported.includes(t)) out.push(t as Target);
+    for (const name of declared) {
+      if (supported.includes(name)) out.push(name as Target);
       else
         diagnostics.push({
           code: 'TARGET_UNSUPPORTED',
-          message: `cible « ${t} » déclarée dans apm.yml : pas d’adaptateur dans ahub, ignorée`,
+          message: t('target "{0}" declared in apm.yml: no adapter in ahub, ignored', [name]),
         });
     }
     if (out.length > 0) return out;
@@ -191,7 +189,9 @@ export function selectTargets(
   if (detected.length > 0) return detected;
   throw new AhubError(
     'NO_TARGET',
-    'aucun outil cible détecté. Indiquez-le avec --tool (claude, codex, copilot, cursor) ou déclarez « targets: » dans apm.yml.',
+    t(
+      'no target tool detected. Name one with --tool (claude, codex, copilot, cursor) or declare "targets:" in apm.yml.',
+    ),
   );
 }
 
@@ -220,7 +220,10 @@ export async function prepareInstall(
     if (!req.initName) {
       throw new AhubError(
         'NOT_FOUND',
-        `aucun ${MANIFEST_FILE} dans ${path.dirname(ctx.manifestPath)}. Lancez « ahub init » ou « ahub add <paquet> ».`,
+        t('no {0} in {1}. Run "ahub init" or "ahub add <package>".', [
+          MANIFEST_FILE,
+          path.dirname(ctx.manifestPath),
+        ]),
       );
     }
     const init: { name: string; targets?: string[] } = { name: req.initName };
@@ -230,7 +233,7 @@ export async function prepareInstall(
   diagnostics.push(...manifestFile.manifest.diagnostics);
   const previousLock = await loadLock(ctx);
   if (req.frozen && !previousLock) {
-    throw new AhubError('LOCK_MISMATCH', `installation figée demandée, mais ${LOCK_FILE} est absent`);
+    throw new AhubError('LOCK_MISMATCH', t('frozen install requested, but {0} is missing', [LOCK_FILE]));
   }
 
   const refresh = new Set<string>();
@@ -241,7 +244,7 @@ export async function prepareInstall(
   for (const query of req.remove ?? []) {
     const dep = manifestFile.findDependency(query);
     if (!dep)
-      throw new AhubError('NOT_FOUND', `« ${query} » n’est pas une dépendance directe de ce projet`, {
+      throw new AhubError('NOT_FOUND', t('"{0}" is not a direct dependency of this project', [query]), {
         query,
       });
     manifestFile.removeApmDependency(depIdentity(dep));
@@ -252,7 +255,7 @@ export async function prepareInstall(
     for (const query of req.update ?? []) {
       const dep = manifestFile.findDependency(query);
       if (!dep)
-        throw new AhubError('NOT_FOUND', `« ${query} » n’est pas une dépendance directe de ce projet`, {
+        throw new AhubError('NOT_FOUND', t('"{0}" is not a direct dependency of this project', [query]), {
           query,
         });
       refresh.add(depIdentity(dep));
@@ -295,7 +298,11 @@ export async function prepareInstall(
           // req-mf-022 : une sélection insatisfaite n'est jamais une demande de retrait.
           throw new AhubError(
             'RESOLUTION_FAILED',
-            `${pkg.identity} : aucun des skills demandés (${pkg.ref.skills.join(', ')}) n’existe. Disponibles : ${available.join(', ') || 'aucun'}.`,
+            t('{0}: none of the requested skills ({1}) exists. Available: {2}.', [
+              pkg.identity,
+              pkg.ref.skills.join(', '),
+              available.join(', ') || t('none'),
+            ]),
             { identity: pkg.identity, requested: pkg.ref.skills, available },
           );
         }
@@ -408,7 +415,9 @@ export async function applyInstall(p: PreparedInstall, opts: InstallOptions = {}
     if (p.blocked && !opts.allowUnsafe) {
       throw new AhubError(
         'SCAN_BLOCKED',
-        'le scan de sécurité a relevé des constats critiques : déploiement refusé (contournement explicite : --allow-unsafe)',
+        t(
+          'the security scan found critical findings: deployment refused (explicit override: --allow-unsafe)',
+        ),
         {
           findings: p.findings.filter((f) => f.severity === 'critical'),
         },
@@ -421,7 +430,7 @@ export async function applyInstall(p: PreparedInstall, opts: InstallOptions = {}
     if (uncovered.length > 0) {
       throw new AhubError(
         'FILE_MODIFIED',
-        `${uncovered.length} fichier(s) modifié(s) à la main ou non géré(s) : rien n’a été écrit`,
+        t('{0} file(s) edited by hand or unmanaged: nothing was written', [uncovered.length]),
         { conflicts: uncovered },
       );
     }
